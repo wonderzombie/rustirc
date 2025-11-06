@@ -19,7 +19,10 @@ pub enum Command {
         args: Vec<String>,
         trailing: Option<String>,
     },
-    // Part / Numeric / Unknown can be added later with String as well
+    Part {
+        nick: String,
+        channel: String,
+    }, // Part / Numeric / Unknown can be added later with String as well
 }
 
 impl Command {
@@ -40,11 +43,17 @@ impl Command {
                 channel: parts.first_arg()?.to_owned(),
             }),
 
+            "PART" => Some(Command::Part {
+                nick,
+                channel: parts.first_arg()?.to_owned(),
+            }),
+
             _ if parts.is_numeric() => Some(Command::Numeric {
                 code: parts.code()?,
                 args: parts.args.iter().map(|s| (*s).to_owned()).collect(),
                 trailing: parts.trailing_or_first().map(str::to_owned),
             }),
+
             _ => None,
         }
     }
