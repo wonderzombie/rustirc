@@ -1,53 +1,47 @@
-use std::time::SystemTime;
+use std::{borrow::Cow, time::SystemTime};
 
 #[derive(Debug, PartialEq)]
-pub enum Command {
+pub enum Command<'a> {
     Ping {
-        token: Option<String>,
+        token: Option<Cow<'a, str>>,
     },
     Join {
-        nick: String,
-        channel: String,
+        nick: Cow<'a, str>,
+        channel: Cow<'a, str>,
     },
     Privmsg {
-        nick: String,
-        channel: String,
-        message: String,
+        nick: Cow<'a, str>,
+        channel: Cow<'a, str>,
+        message: Cow<'a, str>,
     },
-    // Part {
-    //     nick: String,
-    //     channel: String,
-    //     message: Option<String>,
-    // },
-    // Numeric {
-    //     code: u16,
-    //     trailing: Option<String>,
-    // },
+    // Part / Numeric / Unknown can be added later with Cow<'a, str> as well
 }
 
-impl Command {
-    fn from_parts(nick: String, parts: CmdParts<'_>, trailing: &str) -> Option<Command> {
-        // println!("nick {} parts {:#?} trailing {}", nick, parts, trailing);
+impl<'a> Command<'a> {
+    fn from_parts(nick: Cow<'a, str>, parts: &CmdParts<'a>, trailing: &'a str) -> Option<Command<'a>> {
         match parts.command {
             "PING" => {
-                let token = *parts.args.first()?;
-                Some(Command::Ping {
-                    token: Some(token.to_owned()),
-                })
+                // Prefer trailing token if present, else first arg; allow None
+                let token = if !trailing.is_empty() {
+                    Some(Cow::from(trailing))
+                } else {
+                    parts.args.first().map(|s| Cow::from(*s))
+                };
+                Some(Command::Ping { token })
             }
             "PRIVMSG" => {
                 let channel = *parts.args.first()?;
                 Some(Command::Privmsg {
                     nick,
-                    channel: channel.to_owned(),
-                    message: trailing.to_owned(),
+                    channel: Cow::from(channel),
+                    message: Cow::from(trailing),
                 })
             }
             "JOIN" => {
                 let channel = *parts.args.first()?;
                 Some(Command::Join {
                     nick,
-                    channel: channel.to_owned(),
+                    channel: Cow::from(channel),
                 })
             }
             _ => None,
@@ -62,10 +56,10 @@ pub struct MsgMeta {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct Msg {
+pub struct Msg<'a> {
     pub meta: MsgMeta,
-    pub source: Option<String>,
-    pub command: Command,
+    pub source: Option<Cow<'a, str>>, // entire prefix if present
+    pub command: Command<'a>,
 }
 
 #[derive(Debug)]
@@ -75,8 +69,8 @@ struct CmdParts<'a> {
     args: Vec<&'a str>,
 }
 
-impl Msg {
-    pub fn parse(line: &str, now: SystemTime) -> Option<Msg> {
+impl<'a> Msg<'a> {
+    pub fn parse(line: &'a str, now: SystemTime) -> Option<Msg<'a>> {
         let meta = MsgMeta {
             raw: line.to_string(),
             ts: now,
@@ -86,61 +80,29 @@ impl Msg {
         let cmd_parts = Self::parse_command_tokens(before)?;
 
         let nick = Self::source_to_nick(cmd_parts.source);
-        let message = trailing.to_string();
-        let source = cmd_parts.source.map(|s| s.to_string());
-        let first_arg = cmd_parts.args.first();
+        let source = cmd_parts.source.map(Cow::from);
 
-        match cmd_parts.command {
-            "PING" => Some(Msg {
-                meta,
-                source,
-                command: Command::Ping {
-                    token: cmd_parts.source.map(|s| String::from(s)),
-                },
-            }),
-            "PRIVMSG" => Some(Msg {
-                meta,
-                source,
-                command: Command::Privmsg {
-                    nick: nick,
-                    channel: first_arg
-                        .expect("PRIVMSG requires a channel argument")
-                        .to_string(),
-                    message: message,
-                },
-            }),
-            "JOIN" => Some(Msg {
-                meta,
-                source,
-                command: Command::Join {
-                    nick,
-                    channel: first_arg
-                        .expect("JOIN requires a channel argument")
-                        .to_string(),
-                },
-            }),
-            _ => None,
+        let command = Command::from_parts(nick, &cmd_parts, trailing)?;
+        Some(Msg { meta, source, command })
+    }
+
+    fn source_to_nick<'b>(source: Option<&'b str>) -> Cow<'b, str> {
+        match source.and_then(|s| s.split('!').next()) {
+            Some(n) => Cow::from(n),
+            None => Cow::from(""),
         }
     }
 
-    fn source_to_nick(source: Option<&str>) -> String {
-        source
-            .and_then(|s| s.split("!").next())
-            .unwrap_or_default()
-            .to_string()
-    }
-
-    fn parse_command_tokens<'a>(before: &'a str) -> Option<CmdParts<'a>> {
-        let mut tokens = before.split_ascii_whitespace();
-        let maybe_source = tokens.next();
-        let source = maybe_source.and_then(|w| w.strip_prefix(":"));
-        let command = tokens.next()?;
-        let args = tokens.collect();
-        Some(CmdParts {
-            source,
-            command,
-            args,
-        })
+    fn parse_command_tokens<'b>(before: &'b str) -> Option<CmdParts<'b>> {
+        let mut it = before.split_ascii_whitespace();
+        let first = it.next()?;
+        let (source, command) = if first.starts_with(':') {
+            (Some(first.trim_start_matches(':')), it.next()?)
+        } else {
+            (None, first)
+        };
+        let args = it.collect();
+        Some(CmdParts { source, command, args })
     }
 }
 
@@ -154,15 +116,16 @@ fn split_irc(line: &str) -> Option<(&str, &str)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::borrow::Cow;
 
     #[test]
     fn from_parts_privmsg() {
         let got = Command::from_parts(
-            String::from("nickname"),
-            CmdParts {
+            Cow::from("nickname"),
+            &CmdParts {
                 source: Some("nickname!+username@host"),
                 command: "PRIVMSG",
-                args: vec![&"#channel"],
+                args: vec!["#channel"],
             },
             "chat chat chat",
         )
@@ -170,9 +133,9 @@ mod tests {
 
         assert_eq!(
             Command::Privmsg {
-                nick: String::from("nickname"),
-                channel: String::from("#channel"),
-                message: String::from("chat chat chat")
+                nick: "nickname".into(),
+                channel: "#channel".into(),
+                message: "chat chat chat".into(),
             },
             got
         );
@@ -186,16 +149,13 @@ mod tests {
 
         assert_eq!(
             Msg {
-                meta: MsgMeta {
-                    raw: String::from(raw),
-                    ts: now,
-                },
+                meta: MsgMeta { raw: String::from(raw), ts: now },
                 command: Command::Privmsg {
-                    nick: String::from("nick"),
-                    channel: String::from("#channel"),
-                    message: String::from("chat chat chat"),
+                    nick: "nick".into(),
+                    channel: "#channel".into(),
+                    message: "chat chat chat".into(),
                 },
-                source: Some(String::from("nick!username@host")),
+                source: Some("nick!username@host".into()),
             },
             got
         );
@@ -209,13 +169,8 @@ mod tests {
 
         assert_eq!(
             Msg {
-                meta: MsgMeta {
-                    raw: String::from(raw),
-                    ts: now
-                },
-                command: Command::Ping {
-                    token: Some(String::from("foo.example.com"))
-                },
+                meta: MsgMeta { raw: String::from(raw), ts: now },
+                command: Command::Ping { token: Some("foo.example.com".into()) },
                 source: None,
             },
             got
