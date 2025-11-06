@@ -1,31 +1,22 @@
-use std::{borrow::Cow, time::SystemTime};
+use std::time::SystemTime;
 
 #[derive(Debug, PartialEq)]
-pub enum Command<'a> {
-    Ping {
-        token: Option<Cow<'a, str>>,
-    },
-    Join {
-        nick: Cow<'a, str>,
-        channel: Cow<'a, str>,
-    },
-    Privmsg {
-        nick: Cow<'a, str>,
-        channel: Cow<'a, str>,
-        message: Cow<'a, str>,
-    },
-    // Part / Numeric / Unknown can be added later with Cow<'a, str> as well
+pub enum Command {
+    Ping { token: Option<String> },
+    Join { nick: String, channel: String },
+    Privmsg { nick: String, channel: String, message: String },
+    // Part / Numeric / Unknown can be added later with String as well
 }
 
-impl<'a> Command<'a> {
-    fn from_parts(nick: Cow<'a, str>, parts: &CmdParts<'a>, trailing: &'a str) -> Option<Command<'a>> {
+impl Command {
+    fn from_parts(nick: String, parts: &CmdParts<'_>, trailing: &str) -> Option<Command> {
         match parts.command {
             "PING" => {
                 // Prefer trailing token if present, else first arg; allow None
                 let token = if !trailing.is_empty() {
-                    Some(Cow::from(trailing))
+                    Some(trailing.to_owned())
                 } else {
-                    parts.args.first().map(|s| Cow::from(*s))
+                    parts.args.first().map(|s| (*s).to_owned())
                 };
                 Some(Command::Ping { token })
             }
@@ -33,15 +24,15 @@ impl<'a> Command<'a> {
                 let channel = *parts.args.first()?;
                 Some(Command::Privmsg {
                     nick,
-                    channel: Cow::from(channel),
-                    message: Cow::from(trailing),
+                    channel: channel.to_owned(),
+                    message: trailing.to_owned(),
                 })
             }
             "JOIN" => {
                 let channel = *parts.args.first()?;
                 Some(Command::Join {
                     nick,
-                    channel: Cow::from(channel),
+                    channel: channel.to_owned(),
                 })
             }
             _ => None,
@@ -56,10 +47,10 @@ pub struct MsgMeta {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct Msg<'a> {
+pub struct Msg {
     pub meta: MsgMeta,
-    pub source: Option<Cow<'a, str>>, // entire prefix if present
-    pub command: Command<'a>,
+    pub source: Option<String>, // entire prefix if present
+    pub command: Command,
 }
 
 #[derive(Debug)]
@@ -69,10 +60,10 @@ struct CmdParts<'a> {
     args: Vec<&'a str>,
 }
 
-impl<'a> Msg<'a> {
-    pub fn parse(line: &'a str, now: SystemTime) -> Option<Msg<'a>> {
+impl Msg {
+    pub fn parse(line: &str, now: SystemTime) -> Option<Msg> {
         let meta = MsgMeta {
-            raw: line.to_string(),
+            raw: line.to_owned(),
             ts: now,
         };
 
@@ -80,20 +71,20 @@ impl<'a> Msg<'a> {
         let cmd_parts = Self::parse_command_tokens(before)?;
 
         let nick = Self::source_to_nick(cmd_parts.source);
-        let source = cmd_parts.source.map(Cow::from);
+        let source = cmd_parts.source.map(|s| s.to_owned());
 
         let command = Command::from_parts(nick, &cmd_parts, trailing)?;
         Some(Msg { meta, source, command })
     }
 
-    fn source_to_nick<'b>(source: Option<&'b str>) -> Cow<'b, str> {
-        match source.and_then(|s| s.split('!').next()) {
-            Some(n) => Cow::from(n),
-            None => Cow::from(""),
-        }
+    fn source_to_nick(source: Option<&str>) -> String {
+        source
+            .and_then(|s| s.split('!').next())
+            .unwrap_or("")
+            .to_owned()
     }
 
-    fn parse_command_tokens<'b>(before: &'b str) -> Option<CmdParts<'b>> {
+    fn parse_command_tokens(before: &str) -> Option<CmdParts<'_>> {
         let mut it = before.split_ascii_whitespace();
         let first = it.next()?;
         let (source, command) = if first.starts_with(':') {
@@ -116,12 +107,11 @@ fn split_irc(line: &str) -> Option<(&str, &str)> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::borrow::Cow;
 
     #[test]
     fn from_parts_privmsg() {
         let got = Command::from_parts(
-            Cow::from("nickname"),
+            "nickname".to_owned(),
             &CmdParts {
                 source: Some("nickname!+username@host"),
                 command: "PRIVMSG",
