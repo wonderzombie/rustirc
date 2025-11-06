@@ -196,6 +196,29 @@ mod tests {
     }
 
     #[test]
+    fn parse_numeric_welcome() {
+        let raw = ":irc.example.com 001 nickname :Welcome to IRC you cheeky nickname!user@host";
+        let ts = SystemTime::now();
+        let got = Msg::parse(raw, ts).unwrap();
+
+        assert_eq!(
+            Msg {
+                meta: MsgMeta {
+                    raw: raw.into(),
+                    ts
+                },
+                source: Some("irc.example.com".into()),
+                command: Command::Numeric {
+                    code: 001,
+                    args: vec!["nickname".into()],
+                    trailing: Some("Welcome to IRC you cheeky nickname!user@host".into())
+                },
+            },
+            got
+        );
+    }
+
+    #[test]
     fn parse_ping() {
         let raw = "PING foo.example.com";
         let now = SystemTime::now();
