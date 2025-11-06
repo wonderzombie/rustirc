@@ -2,39 +2,49 @@ use std::time::SystemTime;
 
 #[derive(Debug, PartialEq)]
 pub enum Command {
-    Ping { token: Option<String> },
-    Join { nick: String, channel: String },
-    Privmsg { nick: String, channel: String, message: String },
+    Ping {
+        token: Option<String>,
+    },
+    Join {
+        nick: String,
+        channel: String,
+    },
+    Privmsg {
+        nick: String,
+        channel: String,
+        message: String,
+    },
+    Numeric {
+        code: u16,
+        args: Vec<String>,
+        trailing: Option<String>,
+    },
     // Part / Numeric / Unknown can be added later with String as well
 }
 
 impl Command {
-    fn from_parts(nick: String, parts: &CmdParts<'_>, trailing: &str) -> Option<Command> {
+    fn build_from_parts(nick: String, parts: &CmdParts<'_>) -> Option<Command> {
         match parts.command {
-            "PING" => {
-                // Prefer trailing token if present, else first arg; allow None
-                let token = if !trailing.is_empty() {
-                    Some(trailing.to_owned())
-                } else {
-                    parts.args.first().map(|s| (*s).to_owned())
-                };
-                Some(Command::Ping { token })
-            }
-            "PRIVMSG" => {
-                let channel = *parts.args.first()?;
-                Some(Command::Privmsg {
-                    nick,
-                    channel: channel.to_owned(),
-                    message: trailing.to_owned(),
-                })
-            }
-            "JOIN" => {
-                let channel = *parts.args.first()?;
-                Some(Command::Join {
-                    nick,
-                    channel: channel.to_owned(),
-                })
-            }
+            "PING" => Some(Command::Ping {
+                token: parts.trailing_or_first().map(str::to_owned),
+            }),
+
+            "PRIVMSG" => Some(Command::Privmsg {
+                nick,
+                channel: parts.first_arg()?.to_owned(),
+                message: parts.trailing.unwrap_or_default().to_owned(),
+            }),
+
+            "JOIN" => Some(Command::Join {
+                nick,
+                channel: parts.first_arg()?.to_owned(),
+            }),
+
+            _ if parts.is_numeric() => Some(Command::Numeric {
+                code: parts.code()?,
+                args: parts.args.iter().map(|s| (*s).to_owned()).collect(),
+                trailing: parts.trailing_or_first().map(str::to_owned),
+            }),
             _ => None,
         }
     }
@@ -58,6 +68,27 @@ struct CmdParts<'a> {
     source: Option<&'a str>,
     command: &'a str,
     args: Vec<&'a str>,
+    trailing: Option<&'a str>,
+}
+
+impl<'a> CmdParts<'a> {
+    fn is_numeric(&self) -> bool {
+        self.command.len() == 3 && self.command.as_bytes().iter().all(u8::is_ascii_digit)
+    }
+
+    fn code(&self) -> Option<u16> {
+        (self.is_numeric())
+            .then(|| self.command.parse().ok())
+            .flatten()
+    }
+
+    fn first_arg(&self) -> Option<&'_ str> {
+        self.args.first().copied()
+    }
+
+    fn trailing_or_first<'t>(&'t self) -> Option<&'t str> {
+        self.trailing.or_else(|| self.first_arg())
+    }
 }
 
 impl Msg {
@@ -67,14 +98,16 @@ impl Msg {
             ts: now,
         };
 
-        let (before, trailing) = split_irc(line)?;
-        let cmd_parts = Self::parse_command_tokens(before)?;
+        let parts = Self::tokenize_line(line)?;
+        let nick = Self::source_to_nick(parts.source);
+        let source = parts.source.map(|s| s.to_owned());
 
-        let nick = Self::source_to_nick(cmd_parts.source);
-        let source = cmd_parts.source.map(|s| s.to_owned());
-
-        let command = Command::from_parts(nick, &cmd_parts, trailing)?;
-        Some(Msg { meta, source, command })
+        let command = Command::build_from_parts(nick, &parts)?;
+        Some(Msg {
+            meta,
+            source,
+            command,
+        })
     }
 
     fn source_to_nick(source: Option<&str>) -> String {
@@ -84,23 +117,31 @@ impl Msg {
             .to_owned()
     }
 
-    fn parse_command_tokens(before: &str) -> Option<CmdParts<'_>> {
+    fn tokenize_line<'a>(line: &'_ str) -> Option<CmdParts<'_>> {
+        let (before, trailing) = split_irc(line)?;
         let mut it = before.split_ascii_whitespace();
+
         let first = it.next()?;
         let (source, command) = if first.starts_with(':') {
             (Some(first.trim_start_matches(':')), it.next()?)
         } else {
             (None, first)
         };
+
         let args = it.collect();
-        Some(CmdParts { source, command, args })
+        Some(CmdParts {
+            source,
+            command,
+            args,
+            trailing,
+        })
     }
 }
 
-fn split_irc(line: &str) -> Option<(&str, &str)> {
+fn split_irc(line: &str) -> Option<(&str, Option<&str>)> {
     let mut parts = line.splitn(2, " :");
     let before = parts.next()?;
-    let trailing = parts.next().unwrap_or_default();
+    let trailing = parts.next();
     Some((before, trailing))
 }
 
@@ -110,14 +151,14 @@ mod tests {
 
     #[test]
     fn from_parts_privmsg() {
-        let got = Command::from_parts(
+        let got = Command::build_from_parts(
             "nickname".to_owned(),
             &CmdParts {
                 source: Some("nickname!+username@host"),
                 command: "PRIVMSG",
                 args: vec!["#channel"],
+                trailing: Some("chat chat chat"),
             },
-            "chat chat chat",
         )
         .unwrap();
 
@@ -139,7 +180,10 @@ mod tests {
 
         assert_eq!(
             Msg {
-                meta: MsgMeta { raw: String::from(raw), ts: now },
+                meta: MsgMeta {
+                    raw: String::from(raw),
+                    ts: now
+                },
                 command: Command::Privmsg {
                     nick: "nick".into(),
                     channel: "#channel".into(),
@@ -159,8 +203,13 @@ mod tests {
 
         assert_eq!(
             Msg {
-                meta: MsgMeta { raw: String::from(raw), ts: now },
-                command: Command::Ping { token: Some("foo.example.com".into()) },
+                meta: MsgMeta {
+                    raw: String::from(raw),
+                    ts: now
+                },
+                command: Command::Ping {
+                    token: Some("foo.example.com".into())
+                },
                 source: None,
             },
             got
