@@ -1,0 +1,5 @@
+[alias]
+bot = ["run", "-p", "bot", "--",
+       "--server", "irc.libera.chat:6667",
+       "--nick", "botty",
+       "--user", "rusty_bot"]
