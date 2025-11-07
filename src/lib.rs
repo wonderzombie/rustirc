@@ -23,16 +23,27 @@ pub async fn start() -> anyhow::Result<()> {
 }
 
 async fn run_irc(stream: TcpStream, nick: &str, user: &str) -> anyhow::Result<()> {
+    println!("=== running IRC now");
     let (rx, mut tx) = stream.into_split();
-    let mut lines = BufReader::new(rx).lines();
 
+    send(&mut tx, &format!("NICK {}", nick)).await?;
+    send(&mut tx, &format!("USER {}", user)).await?;
+
+    println!("=== awaiting lines, et al");
+    let mut lines = BufReader::new(rx).lines();
     while let Some(line) = lines.next_line().await? {
         let line = line.trim_end();
 
         if let Some(msg) = Msg::parse(line, SystemTime::now()) {
-            println!("{:#?}", msg);
-
+            println!("<<< {}", msg.meta.raw.trim_ascii_end());
         }
     }
+    Ok(())
+}
+
+async fn send(tx: &mut tokio::net::tcp::OwnedWriteHalf, msg: &str) -> anyhow::Result<()> {
+    let out = format!("{}\r\n", msg);
+    println!(">>> {}", msg);
+    tx.write_all(out.as_bytes()).await?;
     Ok(())
 }
