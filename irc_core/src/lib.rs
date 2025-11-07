@@ -1,4 +1,8 @@
+mod bot;
+mod client;
+mod handler;
 mod irc_msg;
+
 use std::time::SystemTime;
 
 use irc_msg::Msg;
