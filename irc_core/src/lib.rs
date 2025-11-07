@@ -6,12 +6,12 @@ use irc_msg::Msg;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpStream;
 
-pub async fn start() -> anyhow::Result<()> {
+pub async fn start(server: &str, nick: &str, user: &str) -> anyhow::Result<()> {
     loop {
-        match TcpStream::connect("irc.libera.chat:6667").await {
+        match TcpStream::connect(server).await {
             Ok(stream) => {
                 println!("=== connected!");
-                if let Err(e) = run_irc(stream, "rusty_bot", "rustling 0 * :Rusty Bot").await {
+                if let Err(e) = run_irc(stream, nick, user).await {
                     println!("=== error {e:?}");
                 }
             }
@@ -27,7 +27,7 @@ async fn run_irc(stream: TcpStream, nick: &str, user: &str) -> anyhow::Result<()
     let (rx, mut tx) = stream.into_split();
 
     send(&mut tx, &format!("NICK {}", nick)).await?;
-    send(&mut tx, &format!("USER {}", user)).await?;
+    send(&mut tx, &format!("USER {} 0 * :{}", user, user)).await?;
 
     println!("=== awaiting lines, et al");
     let mut lines = BufReader::new(rx).lines();
