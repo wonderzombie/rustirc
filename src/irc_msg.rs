@@ -59,19 +59,6 @@ impl Command {
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub struct MsgMeta {
-    pub raw: String,
-    pub ts: SystemTime,
-}
-
-#[derive(Debug, PartialEq)]
-pub struct Msg {
-    pub meta: MsgMeta,
-    pub source: Option<String>, // entire prefix if present
-    pub command: Command,
-}
-
 #[derive(Debug)]
 struct CmdParts<'a> {
     source: Option<&'a str>,
@@ -98,6 +85,19 @@ impl<'a> CmdParts<'a> {
     fn trailing_or_first<'t>(&'t self) -> Option<&'t str> {
         self.trailing.or_else(|| self.first_arg())
     }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct MsgMeta {
+    pub raw: String,
+    pub ts: SystemTime,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Msg {
+    pub meta: MsgMeta,
+    pub source: Option<String>, // entire prefix if present
+    pub command: Command,
 }
 
 impl Msg {
@@ -222,6 +222,29 @@ mod tests {
                     args: vec!["nickname".into()],
                     trailing: Some("Welcome to IRC you cheeky nickname!user@host".into())
                 },
+            },
+            got
+        );
+    }
+
+    #[test]
+    fn parse_numeric_topic() {
+        let raw = ":irc.example.com 332 nickname #channel  :This is the new topic";
+        let ts = SystemTime::now();
+        let got = Msg::parse(raw, ts).unwrap();
+
+        assert_eq!(
+            Msg {
+                meta: MsgMeta {
+                    raw: raw.into(),
+                    ts,
+                },
+                source: Some("irc.example.com".into()),
+                command: Command::Numeric {
+                    code: 332,
+                    args: vec!["nickname".into(), "#channel".into()],
+                    trailing: Some("This is the new topic".into())
+                }
             },
             got
         );
