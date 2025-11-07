@@ -1,12 +1,16 @@
+use anyhow::Context;
 use std::sync::Arc;
-use tokio::sync::{Mutex, mpsc::{Receiver, Sender}};
+use tokio::sync::{
+    Mutex,
+    mpsc::{Receiver, Sender},
+};
 
-use crate::irc_msg;
+use crate::irc_msg::Msg;
 
 #[derive(Clone)]
 pub struct BotClient {
-    tx: Sender<String>,
-    rx: Arc<Mutex<Receiver<irc_msg::Msg>>>,
+    pub(crate) tx: Sender<String>,
+    pub(crate) rx: Arc<Mutex<Receiver<String>>>,
 }
 
 impl BotClient {
@@ -15,8 +19,17 @@ impl BotClient {
         Ok(())
     }
 
-    pub async fn recv(&self) -> Option<crate::irc_msg::Msg> {
+    pub async fn recv(&self) -> anyhow::Result<Option<Msg>> {
         let mut rx = self.rx.lock().await;
-        rx.recv().await
+
+        match rx.recv().await {
+            Some(line) => {
+                let msg = Msg::parse(&line, std::time::SystemTime::now())
+                    .with_context(|| format!("failed to parse IRC line: {}", line))?;
+                anyhow::Ok(Some(msg))
+            }
+            None => Ok(None),
+        }
+    }
     }
 }

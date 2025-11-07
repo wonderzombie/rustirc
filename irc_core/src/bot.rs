@@ -34,7 +34,21 @@ impl BotBuilder {
 
 impl Bot {
     pub async fn run(mut self) -> anyhow::Result<()> {
-        // ...
+        let ctx = crate::handler::Context {
+            client: self.client.clone(),
+            state: self.state.clone(),
+        };
+
+        while let Some(msg) = self.client.recv().await? {
+            for h in &self.handlers {
+                use std::ops::ControlFlow;
+                let flow = h.handle(&ctx, &msg).await;
+                if matches!(flow, ControlFlow::Break(())) {
+                    break;
+                }
+            }
+        }
+
         Ok(())
     }
 }

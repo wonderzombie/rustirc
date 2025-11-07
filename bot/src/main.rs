@@ -17,5 +17,13 @@ async fn main() -> anyhow::Result<()> {
     println!("=== Hello, world!");
     let args = Args::parse();
     println!("=== Using nick: {}, user: {}, server: {}", args.nick, args.user, args.server);
-    irc_core::start(&args.server, &args.nick, &args.user).await
+
+    let client = irc_core::connect(args.server, args.nick, args.user).await?;
+    let bot = irc_core::bot::BotBuilder::new()
+        // .with_handler(...) // Add handlers here
+        .build(client);
+
+    bot.run().await?;
+
+    Ok(())
 }
