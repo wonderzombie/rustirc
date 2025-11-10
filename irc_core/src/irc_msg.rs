@@ -22,7 +22,13 @@ pub enum Command {
     Part {
         nick: String,
         channel: String,
-    }, // Part / Numeric / Unknown can be added later with String as well
+    },
+    Notice {
+        nick: String,
+        channel: String,
+        message: String,
+    },
+    Other {},
 }
 
 impl Command {
@@ -48,13 +54,19 @@ impl Command {
                 channel: parts.first_arg()?.to_owned(),
             }),
 
+            "NOTICE" => Some(Command::Notice {
+                nick,
+                channel: parts.first_arg()?.to_owned(),
+                message: parts.trailing.unwrap_or_default().to_owned(),
+            }),
+
             _ if parts.is_numeric() => Some(Command::Numeric {
                 code: parts.code()?,
                 args: parts.args.iter().map(|s| (*s).to_owned()).collect(),
                 trailing: parts.trailing_or_first().map(str::to_owned),
             }),
 
-            _ => None,
+            _ => Some(Command::Other {}),
         }
     }
 }
@@ -269,5 +281,14 @@ mod tests {
             },
             got
         )
+    }
+
+    #[test]
+    fn parse_notice() {
+        let raw = ":irc.example.com NOTICE * :*** Looking up your hostname...";
+        let now = SystemTime::now();
+        let got = Msg::parse(raw, now);
+
+        assert!(!got.is_none());
     }
 }
