@@ -38,12 +38,15 @@ pub async fn connect(
     tokio::spawn(async move {
         // IRC registration first.
         // `BotClient::send` already appends CRLF; here we write raw lines.
-        let _ = write_half
-            .write_all(format!("NICK {nick}\r\n").as_bytes())
-            .await;
-        let _ = write_half
-            .write_all(format!("USER {user} 0 * :{user}\r\n").as_bytes())
-            .await;
+        // Registration
+        if let Err(e) = write_half.write_all(format!("NICK {nick}\r\n").as_bytes()).await {
+            eprintln!("failed to write NICK: {e:?}");
+            return;
+        }
+        if let Err(e) = write_half.write_all(format!("USER {user} 0 * :{user}\r\n").as_bytes()).await {
+            eprintln!("failed to write USER: {e:?}");
+            return;
+        }
 
         while let Some(mut line) = outgoing_rx.recv().await {
             if !line.ends_with("\r\n") {
@@ -53,6 +56,7 @@ pub async fn connect(
                 eprintln!("writer task error: {e:?}");
                 break;
             }
+            println!("==> {}", line.trim_end());
         }
     });
 

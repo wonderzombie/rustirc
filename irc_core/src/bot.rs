@@ -33,7 +33,7 @@ impl BotBuilder {
 }
 
 impl Bot {
-    pub async fn run(mut self) -> anyhow::Result<()> {
+    pub async fn run(self) -> anyhow::Result<()> {
         let ctx = crate::handler::Context {
             client: self.client.clone(),
             state: self.state.clone(),
