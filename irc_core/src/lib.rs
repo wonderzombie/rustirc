@@ -60,6 +60,7 @@ pub async fn connect(
     tokio::spawn(async move {
         let mut lines = BufReader::new(read_half).lines();
         while let Ok(Some(line)) = lines.next_line().await {
+            println!("<== {}", line.trim_end());
             if incoming_tx.send(line).await.is_err() {
                 break; // receiver dropped; end the task
             }
