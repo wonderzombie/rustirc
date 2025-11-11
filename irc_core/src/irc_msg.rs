@@ -194,6 +194,29 @@ mod tests {
     }
 
     #[test]
+    fn from_parts_notice() {
+        let got = Command::build_from_parts(
+            "irc.example.com".to_owned(),
+            &CmdParts {
+                source: Some("irc.example.com"),
+                command: "NOTICE",
+                args: vec!["*"],
+                trailing: Some("*** Looking up your hostname..."),
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            Command::Notice {
+                nick: "irc.example.com".into(),
+                channel: "*".into(),
+                message: "*** Looking up your hostname...".into(),
+            },
+            got
+        );
+
+    }
+
+    #[test]
     fn parse_privmsg() {
         let raw = ":nick!username@host PRIVMSG #channel :chat chat chat";
         let now = SystemTime::now();
