@@ -24,13 +24,19 @@ impl handler::Handler for ExampleHandler {
                     _ => return ControlFlow::Continue(()),
                 }
             }
+
             irc_msg::Command::Privmsg {
                 ref channel,
                 ref message,
                 ..
             } => {
                 println!("=== PRIVMSG {} :{}", channel, message);
+
+                if message == "!hello" {
+                    let _ = ctx.client.privmsg(channel, "Hello!").await;
+                }
             }
+
             _ => {}
         }
 
