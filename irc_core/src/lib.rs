@@ -1,7 +1,7 @@
 pub mod bot;
 pub mod client;
 pub mod handler;
-mod irc_msg;
+pub mod irc_msg;
 
 use std::sync::Arc;
 
