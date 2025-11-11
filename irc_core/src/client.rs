@@ -33,5 +33,27 @@ impl BotClient {
             None => Ok(None),
         }
     }
+
+    pub async fn privmsg(&self, target: &str, msg: &str) -> anyhow::Result<()> {
+        let line = format!("PRIVMSG {} :{}", target, msg);
+        self.send(&line).await
+    }
+
+    pub async fn join(&self, channel: &str) -> anyhow::Result<()> {
+        let line = format!("JOIN {}", channel);
+        self.send(&line).await
+    }
+
+    pub async fn pong(&self, token: Option<&str>) -> anyhow::Result<()> {
+        let line = match token {
+            Some(t) => format!("PONG :{}", t),
+            None => "PONG".to_string(),
+        };
+        self.send(&line).await
+    }
+
+    pub async fn names(&self, channel: &str) -> anyhow::Result<()> {
+        let line = format!("NAMES {}", channel);
+        self.send(&line).await
     }
 }
