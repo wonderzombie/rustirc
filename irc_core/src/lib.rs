@@ -34,12 +34,14 @@ pub async fn connect(
     // Incoming: socket → app
     let (incoming_tx, incoming_rx) = tokio::sync::mpsc::channel::<String>(100);
 
+    let nick_ = nick.clone();
+
     // Writer task: drains outgoing_rx and writes to the TCP socket.
     tokio::spawn(async move {
         // IRC registration first.
         // `BotClient::send` already appends CRLF; here we write raw lines.
         // Registration
-        if let Err(e) = write_half.write_all(format!("NICK {nick}\r\n").as_bytes()).await {
+        if let Err(e) = write_half.write_all(format!("NICK {nick_}\r\n").as_bytes()).await {
             eprintln!("failed to write NICK: {e:?}");
             return;
         }
@@ -75,6 +77,7 @@ pub async fn connect(
     let client = BotClient {
         tx: outgoing_tx,
         rx: Arc::new(tokio::sync::Mutex::new(incoming_rx)),
+        nick: nick.clone(),
     };
 
     Ok(client)

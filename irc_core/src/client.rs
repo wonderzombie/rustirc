@@ -11,6 +11,8 @@ use crate::irc_msg::Msg;
 pub struct BotClient {
     pub(crate) tx: Sender<String>,
     pub(crate) rx: Arc<Mutex<Receiver<String>>>,
+
+    pub nick: String,
 }
 
 impl BotClient {
