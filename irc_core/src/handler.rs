@@ -2,7 +2,7 @@ use std::{collections::HashMap, ops::ControlFlow, sync::Arc, time::SystemTime};
 
 use tokio::sync::Mutex;
 
-use crate::{client::BotClient, irc_msg::{Command, Msg, MsgMeta}};
+use crate::{client::BotClient, irc_msg::Msg};
 
 /// Shared mutable state for modules.
 #[derive(Default)]
