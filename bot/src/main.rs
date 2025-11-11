@@ -1,5 +1,6 @@
 
 use irc_core;
+use irc_core::bot;
 use clap::Parser;
 
 #[derive(Parser, Debug)]
@@ -20,7 +21,7 @@ async fn main() -> anyhow::Result<()> {
     println!("=== Using nick: {}, user: {}, server: {}", args.nick, args.user, args.server);
 
     let client = irc_core::connect(args.server, args.nick, args.user).await?;
-    let bot = irc_core::bot::BotBuilder::new()
+    let bot = bot::BotBuilder::new()
         // .with_handler(...) // Add handlers here
         .build(client);
 
