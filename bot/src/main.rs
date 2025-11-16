@@ -4,6 +4,10 @@ use clap::Parser;
 use irc_core;
 use irc_core::bot;
 
+mod seen;
+mod botty;
+
+
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
@@ -26,7 +30,6 @@ async fn main() -> anyhow::Result<()> {
 
     let client = irc_core::connect(args.server, args.nick, args.user).await?;
     let bot = bot::BotBuilder::new()
-        // .with_handler(...) // Add handlers here
         .with_handler(example_handler::ExampleHandler)
         .build(client);
 
