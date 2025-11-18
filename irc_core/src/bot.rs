@@ -11,11 +11,15 @@ pub struct Bot {
 
 pub struct BotBuilder {
     handlers: Vec<Box<dyn Handler>>,
+    state: Arc<Mutex<State>>,
 }
 
 impl BotBuilder {
     pub fn new() -> Self {
-        Self { handlers: vec![] }
+        Self {
+            handlers: vec![],
+            state: Arc::new(Mutex::new(State::default())),
+        }
     }
 
     pub fn with_handler<H: Handler + 'static>(mut self, h: H) -> Self {
@@ -23,10 +27,17 @@ impl BotBuilder {
         self
     }
 
+    pub fn new_with_state(state: State) -> Self {
+        Self {
+            handlers: vec![],
+            state: Arc::new(Mutex::new(state)),
+        }
+    }
+
     pub fn build(self, client: BotClient) -> Bot {
         Bot {
             handlers: self.handlers,
-            state: Arc::new(Mutex::new(State::default())),
+            state: self.state,
             client,
         }
     }

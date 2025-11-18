@@ -292,6 +292,28 @@ mod tests {
     }
 
     #[test]
+    fn parse_join() {
+        let raw = ":nick!username@host JOIN #channel";
+        let got = Msg::parse(raw, FAKE_NOW).unwrap();
+
+        assert_eq!(
+            Msg {
+                meta: MsgMeta {
+                    raw: String::from(raw),
+                    ts: FAKE_NOW,
+                },
+                command: Command::Join {
+                    channel: "#channel".into()
+                },
+                source: Some("nick!username@host".into()),
+            },
+            got
+        );
+        assert_eq!("nick", got.nick().unwrap());
+        assert_eq!("#channel", got.channel().unwrap());
+    }
+
+    #[test]
     fn parse_ping() {
         let raw = "PING foo.example.com";
         let got = Msg::parse(raw, FAKE_NOW).unwrap();

@@ -13,27 +13,14 @@ impl handler::Handler for ExampleHandler {
                 return ControlFlow::Break(());
             }
 
-            irc_msg::Command::Numeric { code, .. } => {
-                // End of MOTD, join a channel
-                match code {
-                    376 | 422 => {
-                        println!("=== Joined server");
-                        let _ = ctx.client.join("#el_rb_test376").await;
-                        return ControlFlow::Break(());
-                    }
-                    _ => return ControlFlow::Continue(()),
-                }
-            }
-
             irc_msg::Command::Privmsg {
                 ref channel,
                 ref message,
                 ..
             } => {
-                println!("=== PRIVMSG {} :{}", channel, message);
-
-                if message == "!hello" {
-                    let _ = ctx.client.privmsg(channel, "Hello!").await;
+                if message.starts_with("!test") {
+                    let nick = msg.nick().unwrap_or("someone".into());
+                    let _ = ctx.client.privmsg(channel, &format!("hi {}", nick)).await;
                 }
             }
 

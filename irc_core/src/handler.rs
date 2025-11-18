@@ -8,6 +8,7 @@ use crate::{client::BotClient, irc_msg::Msg};
 #[derive(Default)]
 pub struct State {
     pub seen: HashMap<String, SystemTime>,
+    pub channels: Vec<String>,
 }
 
 /// Read/write context passed to handlers.
