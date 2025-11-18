@@ -114,6 +114,16 @@ impl Msg {
         }
     }
 
+    pub fn channel(&self) -> Option<String> {
+        match &self.command {
+            Command::Privmsg { channel, .. } => Some(channel.into()),
+            Command::Join { channel } => Some(channel.into()),
+            Command::Part { channel } => Some(channel.into()),
+            Command::Notice { channel, .. } => Some(channel.into()),
+            _ => None,
+        }
+    }
+
     pub fn parse(line: &str, now: SystemTime) -> Option<Msg> {
         let meta = MsgMeta {
             raw: line.to_owned(),
@@ -349,5 +359,34 @@ mod tests {
             command: Command::Other {},
         };
         assert_eq!(msg.nick(), None);
+    }
+
+    #[test]
+    fn msg_channel_extraction() {
+        let msg = Msg {
+            meta: MsgMeta {
+                raw: String::new(),
+                ts: SystemTime::now(),
+            },
+            source: Some("nickname!username@host".into()),
+            command: Command::Privmsg {
+                channel: "#channel".into(),
+                message: "hello".into(),
+            },
+        };
+        assert_eq!(msg.channel(), Some("#channel".into()));
+    }
+
+    #[test]
+    fn msg_channel_extraction_no_channel() {
+        let msg = Msg {
+            meta: MsgMeta {
+                raw: String::new(),
+                ts: SystemTime::now(),
+            },
+            source: Some("nickname!username@host".into()),
+            command: Command::Ping { token: None },
+        };
+        assert_eq!(msg.channel(), None);
     }
 }
