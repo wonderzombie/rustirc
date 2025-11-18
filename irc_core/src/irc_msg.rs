@@ -1,6 +1,6 @@
 use std::time::SystemTime;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Command {
     Ping {
         token: Option<String>,
@@ -183,6 +183,8 @@ fn split_irc(line: &str) -> Option<(&str, Option<&str>)> {
 mod tests {
     use super::*;
 
+    static FAKE_NOW: SystemTime = SystemTime::UNIX_EPOCH;
+
     #[test]
     fn from_parts_privmsg() {
         let got = Command::build_from_parts(
@@ -227,14 +229,13 @@ mod tests {
     #[test]
     fn parse_privmsg() {
         let raw = ":nick!username@host PRIVMSG #channel :chat chat chat";
-        let now = SystemTime::now();
-        let got = Msg::parse(raw, now).unwrap();
+        let got = Msg::parse(raw, FAKE_NOW).unwrap();
 
         assert_eq!(
             Msg {
                 meta: MsgMeta {
                     raw: String::from(raw),
-                    ts: now
+                    ts: FAKE_NOW,
                 },
                 command: Command::Privmsg {
                     channel: "#channel".into(),
@@ -249,14 +250,13 @@ mod tests {
     #[test]
     fn parse_numeric_welcome() {
         let raw = ":irc.example.com 001 nickname :Welcome to IRC you cheeky nickname!user@host";
-        let ts = SystemTime::now();
-        let got = Msg::parse(raw, ts).unwrap();
+        let got = Msg::parse(raw, FAKE_NOW).unwrap();
 
         assert_eq!(
             Msg {
                 meta: MsgMeta {
                     raw: raw.into(),
-                    ts
+                    ts: FAKE_NOW,
                 },
                 source: Some("irc.example.com".into()),
                 command: Command::Numeric {
@@ -272,14 +272,13 @@ mod tests {
     #[test]
     fn parse_numeric_topic() {
         let raw = ":irc.example.com 332 nickname #channel  :This is the new topic";
-        let ts = SystemTime::now();
-        let got = Msg::parse(raw, ts).unwrap();
+        let got = Msg::parse(raw, FAKE_NOW).unwrap();
 
         assert_eq!(
             Msg {
                 meta: MsgMeta {
                     raw: raw.into(),
-                    ts,
+                    ts: FAKE_NOW,
                 },
                 source: Some("irc.example.com".into()),
                 command: Command::Numeric {
@@ -295,14 +294,13 @@ mod tests {
     #[test]
     fn parse_ping() {
         let raw = "PING foo.example.com";
-        let now = SystemTime::now();
-        let got = Msg::parse(raw, now).unwrap();
+        let got = Msg::parse(raw, FAKE_NOW).unwrap();
 
         assert_eq!(
             Msg {
                 meta: MsgMeta {
                     raw: String::from(raw),
-                    ts: now
+                    ts: FAKE_NOW,
                 },
                 command: Command::Ping {
                     token: Some("foo.example.com".into())
@@ -316,8 +314,7 @@ mod tests {
     #[test]
     fn parse_notice() {
         let raw = ":irc.example.com NOTICE * :*** Looking up your hostname...";
-        let now = SystemTime::now();
-        let got = Msg::parse(raw, now);
+        let got = Msg::parse(raw, FAKE_NOW);
 
         assert!(!got.is_none());
     }
@@ -327,7 +324,7 @@ mod tests {
         let msg = Msg {
             meta: MsgMeta {
                 raw: String::new(),
-                ts: SystemTime::now(),
+                ts: FAKE_NOW,
             },
             source: Some("nickname!username@host".into()),
             command: Command::Other {},
@@ -340,7 +337,7 @@ mod tests {
         let msg = Msg {
             meta: MsgMeta {
                 raw: String::new(),
-                ts: SystemTime::now(),
+                ts: FAKE_NOW,
             },
             source: None,
             command: Command::Other {},
@@ -353,7 +350,7 @@ mod tests {
         let msg = Msg {
             meta: MsgMeta {
                 raw: String::new(),
-                ts: SystemTime::now(),
+                ts: FAKE_NOW,
             },
             source: Some("".into()),
             command: Command::Other {},
@@ -366,7 +363,7 @@ mod tests {
         let msg = Msg {
             meta: MsgMeta {
                 raw: String::new(),
-                ts: SystemTime::now(),
+                ts: FAKE_NOW,
             },
             source: Some("nickname!username@host".into()),
             command: Command::Privmsg {
@@ -382,7 +379,7 @@ mod tests {
         let msg = Msg {
             meta: MsgMeta {
                 raw: String::new(),
-                ts: SystemTime::now(),
+                ts: FAKE_NOW,
             },
             source: Some("nickname!username@host".into()),
             command: Command::Ping { token: None },
