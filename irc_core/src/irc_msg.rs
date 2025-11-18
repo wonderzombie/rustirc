@@ -6,11 +6,9 @@ pub enum Command {
         token: Option<String>,
     },
     Join {
-        nick: String,
         channel: String,
     },
     Privmsg {
-        nick: String,
         channel: String,
         message: String,
     },
@@ -20,11 +18,9 @@ pub enum Command {
         trailing: Option<String>,
     },
     Part {
-        nick: String,
         channel: String,
     },
     Notice {
-        nick: String,
         channel: String,
         message: String,
     },
@@ -32,30 +28,26 @@ pub enum Command {
 }
 
 impl Command {
-    fn build_from_parts(nick: String, parts: &CmdParts<'_>) -> Option<Command> {
+    fn build_from_parts(parts: &CmdParts<'_>) -> Option<Command> {
         match parts.command {
             "PING" => Some(Command::Ping {
                 token: parts.trailing_or_first().map(str::to_owned),
             }),
 
             "PRIVMSG" => Some(Command::Privmsg {
-                nick,
                 channel: parts.first_arg()?.to_owned(),
                 message: parts.trailing.unwrap_or_default().to_owned(),
             }),
 
             "JOIN" => Some(Command::Join {
-                nick,
                 channel: parts.first_arg()?.to_owned(),
             }),
 
             "PART" => Some(Command::Part {
-                nick,
                 channel: parts.first_arg()?.to_owned(),
             }),
 
             "NOTICE" => Some(Command::Notice {
-                nick,
                 channel: parts.first_arg()?.to_owned(),
                 message: parts.trailing.unwrap_or_default().to_owned(),
             }),
@@ -113,6 +105,15 @@ pub struct Msg {
 }
 
 impl Msg {
+    pub fn nick(&self) -> Option<String> {
+        let nick = Self::source_to_nick(self.source.as_deref());
+        if nick.is_empty() {
+            None
+        } else {
+            Some(nick)
+        }
+    }
+
     pub fn parse(line: &str, now: SystemTime) -> Option<Msg> {
         let meta = MsgMeta {
             raw: line.to_owned(),
@@ -120,10 +121,9 @@ impl Msg {
         };
 
         let parts = Self::tokenize_line(line)?;
-        let nick = Self::source_to_nick(parts.source);
         let source = parts.source.map(|s| s.to_owned());
 
-        let command = Command::build_from_parts(nick, &parts)?;
+        let command = Command::build_from_parts(&parts)?;
         Some(Msg {
             meta,
             source,
@@ -131,6 +131,9 @@ impl Msg {
         })
     }
 
+    /// Extracts the nick from the IRC message source string.
+    /// The expected format is "nick!username@host". If the source does not contain '!',
+    /// the entire source string is returned as the nick. If the source is None, returns an empty string.
     fn source_to_nick(source: Option<&str>) -> String {
         source
             .and_then(|s| s.split('!').next())
@@ -173,7 +176,6 @@ mod tests {
     #[test]
     fn from_parts_privmsg() {
         let got = Command::build_from_parts(
-            "nickname".to_owned(),
             &CmdParts {
                 source: Some("nickname!+username@host"),
                 command: "PRIVMSG",
@@ -185,7 +187,6 @@ mod tests {
 
         assert_eq!(
             Command::Privmsg {
-                nick: "nickname".into(),
                 channel: "#channel".into(),
                 message: "chat chat chat".into(),
             },
@@ -196,7 +197,6 @@ mod tests {
     #[test]
     fn from_parts_notice() {
         let got = Command::build_from_parts(
-            "irc.example.com".to_owned(),
             &CmdParts {
                 source: Some("irc.example.com"),
                 command: "NOTICE",
@@ -207,13 +207,11 @@ mod tests {
         .unwrap();
         assert_eq!(
             Command::Notice {
-                nick: "irc.example.com".into(),
                 channel: "*".into(),
                 message: "*** Looking up your hostname...".into(),
             },
             got
         );
-
     }
 
     #[test]
@@ -229,7 +227,6 @@ mod tests {
                     ts: now
                 },
                 command: Command::Privmsg {
-                    nick: "nick".into(),
                     channel: "#channel".into(),
                     message: "chat chat chat".into(),
                 },
@@ -313,5 +310,44 @@ mod tests {
         let got = Msg::parse(raw, now);
 
         assert!(!got.is_none());
+    }
+
+    #[test]
+    fn msg_nick_extraction() {
+        let msg = Msg {
+            meta: MsgMeta {
+                raw: String::new(),
+                ts: SystemTime::now(),
+            },
+            source: Some("nickname!username@host".into()),
+            command: Command::Other {},
+        };
+        assert_eq!(msg.nick(), Some("nickname".into()));
+    }
+
+    #[test]
+    fn msg_nick_extraction_no_prefix() {
+        let msg = Msg {
+            meta: MsgMeta {
+                raw: String::new(),
+                ts: SystemTime::now(),
+            },
+            source: None,
+            command: Command::Other {},
+        };
+        assert_eq!(msg.nick(), None);
+    }
+
+    #[test]
+    fn msg_nick_extraction_no_nick() {
+        let msg = Msg {
+            meta: MsgMeta {
+                raw: String::new(),
+                ts: SystemTime::now(),
+            },
+            source: Some("".into()),
+            command: Command::Other {},
+        };
+        assert_eq!(msg.nick(), None);
     }
 }
