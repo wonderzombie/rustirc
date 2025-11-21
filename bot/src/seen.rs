@@ -1,4 +1,5 @@
 use std::ops::ControlFlow;
+use chrono_humanize::HumanTime;
 
 use irc_core::{
     self,
@@ -31,10 +32,8 @@ impl Handler for SeenHandler {
                     };
 
                     let response = if let Some(seen_time) = seen_time_opt {
-                        let seen_time = seen_time
-                            .format("%Y-%m-%d %H:%M:%S %Z")
-                            .to_string();
-                        format!("{} was last seen at {:?}", target_nick, seen_time)
+                        let human_time = HumanTime::from(seen_time).to_string();
+                        format!("{} was last seen {}", target_nick, human_time)
                     } else {
                         println!(
                             "No seen time found for {} in {:?}",
