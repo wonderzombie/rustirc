@@ -1,4 +1,3 @@
-mod botty;
 mod example_handler;
 mod reply;
 mod seen;
