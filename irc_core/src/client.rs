@@ -26,7 +26,7 @@ impl BotClient {
 
         match rx.recv().await {
             Some(line) => {
-                let msg = Msg::parse(&line, std::time::SystemTime::now())
+                let msg = Msg::parse(&line, chrono::Local::now())
                     .with_context(|| format!("failed to parse IRC line: {}", line))?;
                 anyhow::Ok(Some(msg))
             }

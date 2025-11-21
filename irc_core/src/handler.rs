@@ -1,4 +1,5 @@
-use std::{collections::HashMap, ops::ControlFlow, sync::Arc, time::SystemTime};
+use std::{collections::HashMap, ops::ControlFlow, sync::Arc};
+use chrono::{DateTime, Local};
 
 use tokio::sync::Mutex;
 
@@ -7,7 +8,7 @@ use crate::{client::BotClient, irc_msg::Msg};
 /// Shared mutable state for modules.
 #[derive(Default)]
 pub struct State {
-    pub seen: HashMap<String, SystemTime>,
+    pub seen: HashMap<String, DateTime<Local>>,
     pub channels: Vec<String>,
 }
 

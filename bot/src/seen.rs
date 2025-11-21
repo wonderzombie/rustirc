@@ -31,6 +31,9 @@ impl Handler for SeenHandler {
                     };
 
                     let response = if let Some(seen_time) = seen_time_opt {
+                        let seen_time = seen_time
+                            .format("%Y-%m-%d %H:%M:%S %Z")
+                            .to_string();
                         format!("{} was last seen at {:?}", target_nick, seen_time)
                     } else {
                         println!(
