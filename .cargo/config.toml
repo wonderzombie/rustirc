@@ -4,5 +4,5 @@ bot = ["run", "-p", "bot", "--",
        "--nick", "rustobotato",
        "--user", "tobotato"]
 
-ircd = ["exec", "/Users/wonderzombie/miniircd/miniircd --verbose"]
+ircd = "exec /Users/wonderzombie/src/miniircd/miniircd --verbose"
 
