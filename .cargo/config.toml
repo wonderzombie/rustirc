@@ -1,5 +1,8 @@
 [alias]
 bot = ["run", "-p", "bot", "--",
-       "--server", "irc.libera.chat:6667",
-       "--nick", "botty",
-       "--user", "rusty_bot"]
+       "--server", "localhost:6667",
+       "--nick", "rustobotato",
+       "--user", "tobotato"]
+
+ircd = ["exec", "/Users/wonderzombie/miniircd/miniircd --verbose"]
+
