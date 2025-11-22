@@ -3,7 +3,7 @@ use std::ops::ControlFlow;
 
 use irc_core::{
     self,
-    handler::{self, Handler, SeenInfo},
+    handler::{self, Handler},
     irc_msg,
 };
 
@@ -32,13 +32,9 @@ impl Handler for SeenHandler {
             }
 
             if let Some(speaker_nick) = msg.nick() {
-                println!("Updating seen time for {}", speaker_nick);
-                let info = SeenInfo {
-                    nick: speaker_nick.clone(),
-                    last_seen: chrono::Local::now(),
-                    message: message.clone(),
-                };
-                ctx.state.lock().await.seen.insert(speaker_nick, info);
+                let now = msg.meta.ts.with_timezone(&chrono::Local);
+                let mut state = ctx.state.lock().await;
+                handler::State::update_seen(&mut state.seen, &speaker_nick, message, now);
             }
         }
 
@@ -63,6 +59,7 @@ fn format_seen_response(state: &handler::State, target_nick: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use irc_core::handler::SeenInfo;
     use std::collections::HashMap;
 
     #[test]
