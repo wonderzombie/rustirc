@@ -5,10 +5,18 @@ use tokio::sync::Mutex;
 
 use crate::{client::BotClient, irc_msg::Msg};
 
+/// Information about when a user was last seen and what they said.
+#[derive(Default, Clone)]
+pub struct SeenInfo {
+    pub nick: String,
+    pub last_seen: DateTime<Local>,
+    pub message: String,
+}
+
 /// Shared mutable state for modules.
 #[derive(Default)]
 pub struct State {
-    pub seen: HashMap<String, DateTime<Local>>,
+    pub seen: HashMap<String, SeenInfo>,
     pub channels: Vec<String>,
 }
 
