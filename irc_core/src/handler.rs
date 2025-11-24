@@ -1,9 +1,9 @@
-use std::{collections::HashMap, ops::ControlFlow, sync::Arc};
 use chrono::{DateTime, Local};
+use std::{collections::HashMap, ops::ControlFlow, sync::Arc};
 
 use tokio::sync::Mutex;
 
-use crate::{client::BotClient, irc_msg::Msg};
+use crate::{client::BotClient, irc_msg};
 
 /// Information about when a user was last seen and what they said.
 #[derive(Default, Clone)]
@@ -49,17 +49,46 @@ pub struct Context {
 #[async_trait::async_trait]
 pub trait Handler: Send + Sync {
     /// Return ControlFlow::Break(()) to stop processing further handlers.
-    async fn handle(&self, ctx: &Context, msg: &Msg) -> ControlFlow<()>;
+    async fn handle(&self, ctx: &Context, msg: &irc_msg::Msg) -> ControlFlow<()>;
 }
 
 pub struct HandlerFn<F>(pub F);
 #[async_trait::async_trait]
 impl<F, Fut> Handler for HandlerFn<F>
 where
-    F: Send + Sync + Fn(&Context, &Msg) -> Fut,
+    F: Send + Sync + Fn(&Context, &irc_msg::Msg) -> Fut,
     Fut: std::future::Future<Output = ControlFlow<()>> + Send,
 {
-    async fn handle(&self, ctx: &Context, msg: &Msg) -> ControlFlow<()> {
+    async fn handle(&self, ctx: &Context, msg: &irc_msg::Msg) -> ControlFlow<()> {
         (self.0)(ctx, msg).await
+    }
+}
+
+#[async_trait::async_trait]
+pub trait PrivmsgHandler: Send + Sync {
+    async fn handle_privmsg(
+        &self,
+        ctx: &Context,
+        channel: &str,
+        message: &str,
+        msg: &irc_msg::Msg,
+    ) -> ControlFlow<()>;
+}
+
+#[async_trait::async_trait]
+impl<T> Handler for T
+where
+    T: PrivmsgHandler + Send + Sync,
+{
+    async fn handle(&self, ctx: &Context, msg: &irc_msg::Msg) -> ControlFlow<()> {
+        if let irc_msg::Command::Privmsg {
+            ref channel,
+            ref message,
+        } = msg.command
+        {
+            self.handle_privmsg(ctx, channel, message, msg).await
+        } else {
+            ControlFlow::Continue(())
+        }
     }
 }
