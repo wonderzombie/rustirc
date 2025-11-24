@@ -12,9 +12,9 @@ impl handler::PrivmsgHandler for RumorsHandler {
     async fn handle_privmsg(
         &self,
         ctx: &irc_core::handler::Context,
+        source: &str,
         channel: &str,
         message: &str,
-        msg: &irc_msg::Msg,
     ) -> std::ops::ControlFlow<()> {
         if let Some(stripped) = strip_bot_prefix(&self.bot_name, message) {
             if let Some(topic) = extract_topic(stripped) {
@@ -22,12 +22,10 @@ impl handler::PrivmsgHandler for RumorsHandler {
                     let response = format!("{} {}", self.random_prefix(), rumor);
                     let _ = ctx.client.privmsg(channel, &response).await;
                 }
-            } else {
+            } else if !source.is_empty() {
                 // Store the rumor
-                if let Some(speaker_nick) = msg.nick() {
-                    let _ = self.store_rumor(&speaker_nick, channel, stripped).await;
-                    let _ = ctx.client.privmsg(channel, "Good to know!").await;
-                }
+                let _ = self.store_rumor(source, channel, stripped).await;
+                let _ = ctx.client.privmsg(channel, "Good to know!").await;
             }
             return std::ops::ControlFlow::Break(());
         }
