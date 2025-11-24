@@ -1,41 +1,39 @@
 use chrono_humanize::HumanTime;
 use std::ops::ControlFlow;
 
-use irc_core::{
-    self,
-    handler::{self, Handler},
-    irc_msg,
-};
+use irc_core::
+    handler::{self, PrivmsgHandler}
+;
 
 pub struct SeenHandler;
 
 #[async_trait::async_trait]
-impl Handler for SeenHandler {
-    async fn handle(&self, ctx: &handler::Context, msg: &irc_msg::Msg) -> ControlFlow<()> {
-        if let irc_msg::Command::Privmsg {
-            ref channel,
-            ref message,
-        } = msg.command
-        {
-            if message.to_lowercase().starts_with("!seen") {
-                let parts: Vec<&str> = message.split_whitespace().collect();
-                if parts.len() >= 2 {
-                    let target_nick = parts[1];
+impl PrivmsgHandler for SeenHandler {
+    async fn handle_privmsg(
+        &self,
+        ctx: &handler::Context,
+        source: &str,
+        channel: &str,
+        message: &str,
+    ) -> ControlFlow<()> {
+        if message.to_lowercase().starts_with("!seen") {
+            let parts: Vec<&str> = message.split_whitespace().collect();
+            if parts.len() >= 2 {
+                let target_nick = parts[1];
 
-                    let response = {
-                        let state = ctx.state.lock().await;
-                        format_seen_response(&state, target_nick)
-                    };
+                let response = {
+                    let state = ctx.state.lock().await;
+                    format_seen_response(&state, target_nick)
+                };
 
-                    let _ = ctx.client.privmsg(channel, &response).await;
-                }
+                let _ = ctx.client.privmsg(channel, &response).await;
             }
+        }
 
-            if let Some(speaker_nick) = msg.nick() {
-                let now = msg.meta.ts.with_timezone(&chrono::Local);
-                let mut state = ctx.state.lock().await;
-                handler::State::update_seen(&mut state.seen, &speaker_nick, message, now);
-            }
+        if !source.is_empty() {
+            let now = chrono::Local::now();
+            let mut state = ctx.state.lock().await;
+            handler::State::update_seen(&mut state.seen, source, message, now);
         }
 
         ControlFlow::Continue(())
