@@ -8,31 +8,28 @@ pub struct RumorsHandler {
 }
 
 #[async_trait::async_trait]
-impl handler::Handler for RumorsHandler {
-    async fn handle(
+impl handler::PrivmsgHandler for RumorsHandler {
+    async fn handle_privmsg(
         &self,
         ctx: &irc_core::handler::Context,
+        channel: &str,
+        message: &str,
         msg: &irc_msg::Msg,
     ) -> std::ops::ControlFlow<()> {
-        if let irc_msg::Command::Privmsg {
-            ref channel,
-            ref message,
-        } = msg.command
-        {
-            if let Some(stripped) = strip_bot_prefix(&self.bot_name, message) {
-                if let Some(topic) = extract_topic(stripped) {
-                    if let Ok(Some(rumor)) = self.fetch_random_rumor_matching(topic).await {
-                        let response = format!("{} {}", self.random_prefix(), rumor);
-                        let _ = ctx.client.privmsg(channel, &response).await;
-                    }
-                } else {
-                    // Store the rumor
-                    if let Some(speaker_nick) = msg.nick() {
-                        let _ = self.store_rumor(&speaker_nick, channel, stripped).await;
-                        let _ = ctx.client.privmsg(channel, "Good to know!").await;
-                    }
+        if let Some(stripped) = strip_bot_prefix(&self.bot_name, message) {
+            if let Some(topic) = extract_topic(stripped) {
+                if let Ok(Some(rumor)) = self.fetch_random_rumor_matching(topic).await {
+                    let response = format!("{} {}", self.random_prefix(), rumor);
+                    let _ = ctx.client.privmsg(channel, &response).await;
+                }
+            } else {
+                // Store the rumor
+                if let Some(speaker_nick) = msg.nick() {
+                    let _ = self.store_rumor(&speaker_nick, channel, stripped).await;
+                    let _ = ctx.client.privmsg(channel, "Good to know!").await;
                 }
             }
+            return std::ops::ControlFlow::Break(());
         }
 
         std::ops::ControlFlow::Continue(())
