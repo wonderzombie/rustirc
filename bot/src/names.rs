@@ -15,13 +15,17 @@ impl Handler for NamesHandler {
                 if let Some(nick) = msg.nick()
                     && nick != ctx.client.nick
                 {
-                    println!("=== {0} joined {1}", nick, channel)
+                    println!("=== {0} joined {1}", nick, channel);
+                    let mut state = ctx.state.lock().await;
+                    state.names.push(nick);
                 }
             }
 
             irc_msg::Command::Part { ref channel } => {
                 if let Some(nick) = msg.nick() {
-                    println!("=== {0} left {1}", nick, channel)
+                    println!("=== {0} left {1}", nick, channel);
+                    let mut state = ctx.state.lock().await;
+                    state.names.retain(|n| n != &nick);
                 }
             }
 
