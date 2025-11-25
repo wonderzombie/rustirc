@@ -70,7 +70,7 @@ impl RumorsHandler {
     async fn store_rumor(&self, nick: &str, channel: &str, rumor: &str) -> SqlxResult<()> {
         let now = chrono::Local::now().timestamp();
         sqlx::query_scalar::<_, String>(
-            r#"INSERT INTO rumors (nick, channel, message) VALUES (?1, ?2, ?3, ?4)"#,
+            r#"INSERT INTO rumors (nick, channel, message, ts) VALUES (?1, ?2, ?3, ?4)"#,
         )
         .bind(nick)
         .bind(channel)
