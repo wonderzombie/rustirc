@@ -9,7 +9,7 @@ impl handler::Handler for ReplyHandler {
     async fn handle(&self, ctx: &handler::Context, msg: &irc_msg::Msg) -> ControlFlow<()> {
         match msg.command {
             irc_msg::Command::Privmsg {
-                ref channel,
+                ref reply_to,
                 ref message,
                 ..
             } => {
@@ -18,7 +18,7 @@ impl handler::Handler for ReplyHandler {
                     .contains(ctx.client.nick.to_lowercase().as_str())
                 {
                     let reply = format!("where is {0}, where is {0}", ctx.client.nick);
-                    let _ = ctx.client.privmsg(channel, &reply).await;
+                    let _ = ctx.client.privmsg(&reply_to, &reply).await;
                 }
             }
             _ => {}

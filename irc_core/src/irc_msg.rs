@@ -7,8 +7,17 @@ pub enum Command {
     },
     Join {
         channel: String,
+        message: Option<String>,
+    },
+    Part {
+        channel: String,
+        message: Option<String>,
     },
     Privmsg {
+        reply_to: String,
+        message: String,
+    },
+    Notice {
         channel: String,
         message: String,
     },
@@ -16,13 +25,6 @@ pub enum Command {
         code: u16,
         args: Vec<String>,
         trailing: Option<String>,
-    },
-    Part {
-        channel: String,
-    },
-    Notice {
-        channel: String,
-        message: String,
     },
     Other {},
 }
@@ -35,16 +37,18 @@ impl Command {
             }),
 
             "PRIVMSG" => Some(Command::Privmsg {
-                channel: parts.first_arg()?.to_owned(),
+                reply_to: parts.first_arg()?.to_owned(),
                 message: parts.trailing.unwrap_or_default().to_owned(),
             }),
 
             "JOIN" => Some(Command::Join {
                 channel: parts.first_arg()?.to_owned(),
+                message: parts.trailing.map(str::to_owned),
             }),
 
             "PART" => Some(Command::Part {
                 channel: parts.first_arg()?.to_owned(),
+                message: parts.trailing.map(str::to_owned),
             }),
 
             "NOTICE" => Some(Command::Notice {
@@ -112,9 +116,11 @@ impl Msg {
 
     pub fn channel(&self) -> Option<String> {
         match &self.command {
-            Command::Privmsg { channel, .. } => Some(channel.into()),
-            Command::Join { channel } => Some(channel.into()),
-            Command::Part { channel } => Some(channel.into()),
+            Command::Privmsg {
+                reply_to: channel, ..
+            } => Some(channel.into()),
+            Command::Join { channel, .. } => Some(channel.into()),
+            Command::Part { channel, .. } => Some(channel.into()),
             Command::Notice { channel, .. } => Some(channel.into()),
             _ => None,
         }
@@ -195,7 +201,7 @@ mod tests {
 
         assert_eq!(
             Command::Privmsg {
-                channel: "#channel".into(),
+                reply_to: "#channel".into(),
                 message: "chat chat chat".into(),
             },
             got
@@ -232,7 +238,7 @@ mod tests {
                     ts: FAKE_NOW.into(),
                 },
                 command: Command::Privmsg {
-                    channel: "#channel".into(),
+                    reply_to: "#channel".into(),
                     message: "chat chat chat".into(),
                 },
                 source: Some("nick!username@host".into()),
@@ -287,7 +293,7 @@ mod tests {
 
     #[test]
     fn parse_join() {
-        let raw = ":nick!username@host JOIN #channel";
+        let raw = ":nick!username@host JOIN #channel :hello world";
         let got = Msg::parse(raw, FAKE_NOW.into()).unwrap();
 
         assert_eq!(
@@ -297,7 +303,8 @@ mod tests {
                     ts: FAKE_NOW.into(),
                 },
                 command: Command::Join {
-                    channel: "#channel".into()
+                    channel: "#channel".into(),
+                    message: Some("hello world".into()),
                 },
                 source: Some("nick!username@host".into()),
             },
@@ -383,7 +390,7 @@ mod tests {
             },
             source: Some("nickname!username@host".into()),
             command: Command::Privmsg {
-                channel: "#channel".into(),
+                reply_to: "#channel".into(),
                 message: "hello".into(),
             },
         };

@@ -11,7 +11,7 @@ pub struct NamesHandler;
 impl Handler for NamesHandler {
     async fn handle(&self, ctx: &handler::Context, msg: &irc_msg::Msg) -> ControlFlow<()> {
         match msg.command {
-            irc_msg::Command::Join { ref channel } => {
+            irc_msg::Command::Join { ref channel , .. } => {
                 if let Some(nick) = msg.nick()
                     && nick != ctx.client.nick
                 {
@@ -21,7 +21,7 @@ impl Handler for NamesHandler {
                 }
             }
 
-            irc_msg::Command::Part { ref channel } => {
+            irc_msg::Command::Part { ref channel , ..} => {
                 if let Some(nick) = msg.nick() {
                     println!("=== {0} left {1}", nick, channel);
                     let mut state = ctx.state.lock().await;

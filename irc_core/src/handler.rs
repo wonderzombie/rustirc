@@ -64,12 +64,12 @@ where
 {
     async fn handle(&self, ctx: &Context, msg: &irc_msg::Msg) -> ControlFlow<()> {
         if let irc_msg::Command::Privmsg {
-            ref channel,
+            ref reply_to,
             ref message,
         } = msg.command
             && let Some(ref source) = msg.source
         {
-            self.handle_privmsg(ctx, source, channel, message).await
+            self.handle_privmsg(ctx, source, reply_to, message).await
         } else {
             ControlFlow::Continue(())
         }
