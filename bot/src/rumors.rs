@@ -35,7 +35,8 @@ impl PrivmsgHandler for RumorsHandler {
 }
 
 impl RumorsHandler {
-    pub async fn new(db_url: &str, bot_name: &str) -> SqlxResult<Self> {
+    pub async fn new(db_url: &str, bot_name: impl Into<String>) -> SqlxResult<Self> {
+        let bot_name = bot_name.into();
         let pool = Pool::<Sqlite>::connect(db_url).await?;
         // TODO: load from schema.sql file
         sqlx::query(
