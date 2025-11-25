@@ -22,8 +22,8 @@ impl PrivmsgHandler for RumorsHandler {
                     let response = format!("{} {}", self.random_prefix(), rumor);
                     let _ = ctx.client.privmsg(channel, &response).await;
                 }
-            } else if !source.is_empty() {
-                // Store the rumor
+            } else if !source.is_empty() && !stripped.is_empty() {
+                // Store the rumor only if it has a source and a message
                 let _ = self.store_rumor(source, channel, stripped).await;
                 let _ = ctx.client.privmsg(channel, "Good to know!").await;
             }
