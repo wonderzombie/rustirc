@@ -1,4 +1,4 @@
-use irc_core::{handler, irc_msg};
+use irc_core::handler::{Context, PrivmsgHandler};
 use sqlx::{Pool, Result as SqlxResult, Sqlite};
 
 pub struct RumorsHandler {
@@ -8,10 +8,10 @@ pub struct RumorsHandler {
 }
 
 #[async_trait::async_trait]
-impl handler::PrivmsgHandler for RumorsHandler {
+impl PrivmsgHandler for RumorsHandler {
     async fn handle_privmsg(
         &self,
-        ctx: &irc_core::handler::Context,
+        ctx: &Context,
         source: &str,
         channel: &str,
         message: &str,
