@@ -169,7 +169,7 @@ mod tests {
             extract_query_tail("Who is the best coder?"),
             Some("is the best coder?")
         );
-        assert_eq!(extract_query_tail("Tell me a rumor about Rust."), None,);
+        assert_eq!(extract_query_tail("Tell me a rumor about Rust."), None);
     }
 
     #[test]
