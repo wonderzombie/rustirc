@@ -3,6 +3,7 @@ mod reply;
 mod rumors;
 mod seen;
 mod welcome;
+mod score;
 
 use clap::Parser;
 use irc_core::{self, bot};

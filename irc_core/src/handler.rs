@@ -17,6 +17,7 @@ pub struct SeenInfo {
 #[derive(Default)]
 pub struct State {
     pub seen: HashMap<String, SeenInfo>,
+    pub scores: HashMap<String, i32>,
     pub channels: Vec<String>,
 }
 
@@ -84,7 +85,8 @@ where
         if let irc_msg::Command::Privmsg {
             ref channel,
             ref message,
-        } = msg.command && let Some(ref source) = msg.source
+        } = msg.command
+            && let Some(ref source) = msg.source
         {
             self.handle_privmsg(ctx, source, channel, message).await
         } else {
