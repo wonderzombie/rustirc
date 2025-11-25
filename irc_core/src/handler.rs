@@ -22,26 +22,6 @@ pub struct State {
     pub names: Vec<String>,
 }
 
-impl State {
-    pub fn update_seen(
-        seen: &mut HashMap<String, SeenInfo>,
-        nick: &str,
-        message: &str,
-        now: chrono::DateTime<chrono::Local>,
-    ) {
-        seen.entry(nick.to_string())
-            .and_modify(|info| {
-                info.last_seen = now;
-                info.message = message.to_string();
-            })
-            .or_insert_with(|| SeenInfo {
-                nick: nick.to_string(),
-                last_seen: now,
-                message: message.to_string(),
-            });
-    }
-}
-
 /// Read/write context passed to handlers.
 pub struct Context {
     pub client: BotClient,

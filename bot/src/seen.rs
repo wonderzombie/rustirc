@@ -1,5 +1,5 @@
 use chrono_humanize;
-use std::ops::ControlFlow;
+use std::{collections::HashMap, ops::ControlFlow};
 
 use irc_core::handler::{self, PrivmsgHandler};
 
@@ -41,7 +41,7 @@ impl PrivmsgHandler for SeenHandler {
         if !source.is_empty() {
             let now = chrono::Local::now();
             let mut state = ctx.state.lock().await;
-            handler::State::update_seen(&mut state.seen, source, message, now);
+            update_seen(&mut state.seen, source, message, now);
         }
 
         ControlFlow::Continue(())
@@ -60,6 +60,24 @@ fn format_seen_response(state: &handler::State, target_nick: &str) -> String {
     } else {
         format!("I have not seen {}", target_nick)
     }
+}
+
+fn update_seen(
+    seen: &mut HashMap<String, handler::SeenInfo>,
+    nick: &str,
+    message: &str,
+    now: chrono::DateTime<chrono::Local>,
+) {
+    seen.entry(nick.to_string())
+        .and_modify(|info| {
+            info.last_seen = now;
+            info.message = message.to_string();
+        })
+        .or_insert_with(|| handler::SeenInfo {
+            nick: nick.to_string(),
+            last_seen: now,
+            message: message.to_string(),
+        });
 }
 
 #[cfg(test)]
