@@ -177,4 +177,41 @@ mod tests {
         assert_eq!(extract_topic("rust???"), Some("rust"));
         assert_eq!(extract_topic("something interesting?"), Some("something"));
     }
+
+    #[tokio::test]
+    async fn test_new_rumors_handler() {
+        let handler = RumorsHandler::new("sqlite::memory:", "RumorBot").await;
+        assert!(handler.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_store_rumor_fetch_rumor() {
+        let handler = RumorsHandler::new("sqlite::memory:", "RumorBot")
+            .await
+            .expect("Failed to create RumorsHandler");
+
+        handler
+            .store_rumor("thumbkin", "#channel", "botty was written in rust")
+            .await
+            .expect("Failed to store rumor");
+
+        let fetched = handler
+            .fetch_random_rumor_matching("rust")
+            .await
+            .expect("Failed to fetch rumor");
+
+        assert_eq!(fetched, Some("botty was written in rust".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_random_prefix() {
+        let handler = RumorsHandler {
+            db_pool: Pool::<Sqlite>::connect_lazy("sqlite::memory:").unwrap(),
+            bot_name: "RumorBot".to_string(),
+            canned_prefixes: vec!["prefix1", "prefix2", "prefix3"],
+        };
+
+        let prefix = handler.random_prefix();
+        assert!(handler.canned_prefixes.contains(&prefix));
+    }
 }
