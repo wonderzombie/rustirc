@@ -1,9 +1,7 @@
-use chrono_humanize::HumanTime;
+use chrono_humanize;
 use std::ops::ControlFlow;
 
-use irc_core::
-    handler::{self, PrivmsgHandler}
-;
+use irc_core::handler::{self, PrivmsgHandler};
 
 pub struct SeenHandler;
 
@@ -42,7 +40,7 @@ impl PrivmsgHandler for SeenHandler {
 
 fn format_seen_response(state: &handler::State, target_nick: &str) -> String {
     if let Some(info) = state.seen.get(target_nick) {
-        let human_time = HumanTime::from(info.last_seen);
+        let human_time = chrono_humanize::HumanTime::from(info.last_seen);
         format!(
             "{} was last seen {} saying: {}",
             target_nick,
