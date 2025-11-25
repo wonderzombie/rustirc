@@ -1,6 +1,6 @@
 use std::{collections::HashMap, ops::ControlFlow};
 
-use irc_core::handler::{Context, PrivmsgHandler};
+use crate::irc_core::handler::{Context, PrivmsgHandler};
 
 pub struct ScoreHandler;
 

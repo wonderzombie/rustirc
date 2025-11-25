@@ -1,6 +1,6 @@
 use std::ops::ControlFlow;
 
-use irc_core::{
+use crate::irc_core::{
     handler::{self, Handler},
     irc_msg::{self},
 };

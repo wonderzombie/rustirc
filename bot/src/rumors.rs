@@ -1,4 +1,4 @@
-use irc_core::handler::{Context, PrivmsgHandler};
+use crate::irc_core::handler::{Context, PrivmsgHandler};
 use sqlx::{Pool, Result as SqlxResult, Sqlite};
 
 pub struct RumorsHandler {
