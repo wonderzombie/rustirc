@@ -26,8 +26,9 @@ impl PrivmsgHandler for ScoreHandler {
         if let Some((nick, d)) = delta {
             let mut state = ctx.state.lock().await;
             let scores = &mut state.scores;
-            ScoreHandler::add_to_score(scores, nick, d);
-            let _ = ctx.client.privmsg(channel, "{nick}'s score is now");
+            let new_score = ScoreHandler::add_to_score(scores, nick, d);
+            let response = format!("{nick}'s score is now {new_score}");
+            let _ = ctx.client.privmsg(channel, &response).await;
             return ControlFlow::Break(());
         }
 
