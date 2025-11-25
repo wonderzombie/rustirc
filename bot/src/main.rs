@@ -47,6 +47,7 @@ async fn main() -> anyhow::Result<()> {
         .with_handler(names::NamesHandler)
         .with_handler(rumors_handler)
         .with_handler(seen::SeenHandler)
+        .with_handler(score::ScoreHandler)
         .with_handler(reply::ReplyHandler)
         .build(client);
 
