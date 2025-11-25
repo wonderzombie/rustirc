@@ -14,10 +14,19 @@ impl PrivmsgHandler for SeenHandler {
         channel: &str,
         message: &str,
     ) -> ControlFlow<()> {
-        if message.to_lowercase().starts_with("!seen") {
+        let in_channel = {
+            let state = ctx.state.lock().await;
+            state.channels.iter().any(|c| channel == c)
+        };
+        if !in_channel {
+            return ControlFlow::Continue(());
+        }
+
+        let query = format!("{},", ctx.client.nick);
+        if message.to_ascii_lowercase().starts_with(&query) {
             let parts: Vec<&str> = message.split_whitespace().collect();
-            if parts.len() >= 2 {
-                let target_nick = parts[1];
+            if parts.len() >= 3 && parts[1].to_lowercase() == "seen" {
+                let target_nick = parts[2];
 
                 let response = {
                     let state = ctx.state.lock().await;
@@ -26,6 +35,7 @@ impl PrivmsgHandler for SeenHandler {
 
                 let _ = ctx.client.privmsg(channel, &response).await;
             }
+            return ControlFlow::Continue(());
         }
 
         if !source.is_empty() {
