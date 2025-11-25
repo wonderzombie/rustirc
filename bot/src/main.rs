@@ -1,10 +1,11 @@
 mod example_handler;
+mod names;
+mod ping;
 mod reply;
 mod rumors;
+mod score;
 mod seen;
 mod welcome;
-mod score;
-mod names;
 
 use clap::Parser;
 use irc_core::{self, bot};
@@ -42,6 +43,7 @@ async fn main() -> anyhow::Result<()> {
 
     let client = irc_core::connect(args.server, args.nick, args.user).await?;
     let bot = bot::BotBuilder::new_with_state(state)
+        .with_handler(ping::PingHandler)
         .with_handler(example_handler::ExampleHandler)
         .with_handler(welcome::WelcomeHandler)
         .with_handler(names::NamesHandler)

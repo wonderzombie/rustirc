@@ -41,11 +41,17 @@ pub async fn connect(
         // IRC registration first.
         // `BotClient::send` already appends CRLF; here we write raw lines.
         // Registration
-        if let Err(e) = write_half.write_all(format!("NICK {nick_}\r\n").as_bytes()).await {
+        if let Err(e) = write_half
+            .write_all(format!("NICK {nick_}\r\n").as_bytes())
+            .await
+        {
             eprintln!("failed to write NICK: {e:?}");
             return;
         }
-        if let Err(e) = write_half.write_all(format!("USER {user} 0 * :{user}\r\n").as_bytes()).await {
+        if let Err(e) = write_half
+            .write_all(format!("USER {user} 0 * :{user}\r\n").as_bytes())
+            .await
+        {
             eprintln!("failed to write USER: {e:?}");
             return;
         }

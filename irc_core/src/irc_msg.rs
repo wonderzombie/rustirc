@@ -107,11 +107,7 @@ pub struct Msg {
 impl Msg {
     pub fn nick(&self) -> Option<String> {
         let nick = Self::source_to_nick(self.source.as_deref());
-        if nick.is_empty() {
-            None
-        } else {
-            Some(nick)
-        }
+        if nick.is_empty() { None } else { Some(nick) }
     }
 
     pub fn channel(&self) -> Option<String> {
@@ -189,14 +185,12 @@ mod tests {
 
     #[test]
     fn from_parts_privmsg() {
-        let got = Command::build_from_parts(
-            &CmdParts {
-                source: Some("nickname!+username@host"),
-                command: "PRIVMSG",
-                args: vec!["#channel"],
-                trailing: Some("chat chat chat"),
-            },
-        )
+        let got = Command::build_from_parts(&CmdParts {
+            source: Some("nickname!+username@host"),
+            command: "PRIVMSG",
+            args: vec!["#channel"],
+            trailing: Some("chat chat chat"),
+        })
         .unwrap();
 
         assert_eq!(
@@ -210,14 +204,12 @@ mod tests {
 
     #[test]
     fn from_parts_notice() {
-        let got = Command::build_from_parts(
-            &CmdParts {
-                source: Some("irc.example.com"),
-                command: "NOTICE",
-                args: vec!["*"],
-                trailing: Some("*** Looking up your hostname..."),
-            },
-        )
+        let got = Command::build_from_parts(&CmdParts {
+            source: Some("irc.example.com"),
+            command: "NOTICE",
+            args: vec!["*"],
+            trailing: Some("*** Looking up your hostname..."),
+        })
         .unwrap();
         assert_eq!(
             Command::Notice {
@@ -348,7 +340,7 @@ mod tests {
         let msg = Msg {
             meta: MsgMeta {
                 raw: String::new(),
-                ts: FAKE_NOW.into()
+                ts: FAKE_NOW.into(),
             },
             source: Some("nickname!username@host".into()),
             command: Command::Other {},
@@ -361,7 +353,7 @@ mod tests {
         let msg = Msg {
             meta: MsgMeta {
                 raw: String::new(),
-                ts: FAKE_NOW.into()
+                ts: FAKE_NOW.into(),
             },
             source: None,
             command: Command::Other {},
@@ -374,7 +366,7 @@ mod tests {
         let msg = Msg {
             meta: MsgMeta {
                 raw: String::new(),
-                ts: FAKE_NOW.into()
+                ts: FAKE_NOW.into(),
             },
             source: Some("".into()),
             command: Command::Other {},
@@ -387,7 +379,7 @@ mod tests {
         let msg = Msg {
             meta: MsgMeta {
                 raw: String::new(),
-                ts: FAKE_NOW.into()
+                ts: FAKE_NOW.into(),
             },
             source: Some("nickname!username@host".into()),
             command: Command::Privmsg {
@@ -403,7 +395,7 @@ mod tests {
         let msg = Msg {
             meta: MsgMeta {
                 raw: String::new(),
-                ts: FAKE_NOW.into()
+                ts: FAKE_NOW.into(),
             },
             source: Some("nickname!username@host".into()),
             command: Command::Ping { token: None },
