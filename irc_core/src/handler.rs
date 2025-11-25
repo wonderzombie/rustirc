@@ -19,6 +19,7 @@ pub struct State {
     pub seen: HashMap<String, SeenInfo>,
     pub scores: HashMap<String, i32>,
     pub channels: Vec<String>,
+    pub names: Vec<String>,
 }
 
 impl State {

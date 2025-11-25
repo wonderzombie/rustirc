@@ -4,6 +4,7 @@ mod rumors;
 mod seen;
 mod welcome;
 mod score;
+mod names;
 
 use clap::Parser;
 use irc_core::{self, bot};
@@ -43,6 +44,7 @@ async fn main() -> anyhow::Result<()> {
     let bot = bot::BotBuilder::new_with_state(state)
         .with_handler(example_handler::ExampleHandler)
         .with_handler(welcome::WelcomeHandler)
+        .with_handler(names::NamesHandler)
         .with_handler(rumors_handler)
         .with_handler(seen::SeenHandler)
         .with_handler(reply::ReplyHandler)
