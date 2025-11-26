@@ -3,6 +3,8 @@ pub mod client;
 pub mod handler;
 pub mod irc_msg;
 
+use std::borrow::Cow;
+use std::fmt::Debug;
 use std::sync::Arc;
 
 use tokio::io::AsyncWriteExt;
@@ -14,20 +16,21 @@ use tracing::info;
 
 use crate::client::Client;
 
-pub async fn connect(
-    server: impl Into<String>,
-    nick: impl Into<String>,
-    user: impl Into<String>,
-) -> anyhow::Result<BotClient> {
-    let server = server.into();
-    let nick = nick.into();
-    let user = user.into();
+pub async fn connect<S, N, U>(server: S, nick: N, user: U) -> anyhow::Result<Client>
+where
+    S: Send + Debug + Into<Cow<'static, str>>,
+    N: Send + Debug + Into<Cow<'static, str>>,
+    U: Send + Debug + Into<Cow<'static, str>>,
+{
+    let server: Cow<'static, str> = server.into();
+    let nick: Cow<'static, str> = nick.into();
+    let user: Cow<'static, str> = user.into();
 
-    info!("Connecting to IRC server {} as {}", server, nick);
+    info!("Connecting to IRC server {} as {}", server.as_ref(), nick.as_ref());
 
-    let stream = TcpStream::connect(&server)
+    let stream = TcpStream::connect(server.as_ref())
         .await
-        .with_context(|| format!("failed to connect to server {server}"))?;
+        .with_context(|| format!("failed to connect to server {}", server.as_ref()))?;
 
     let (read_half, mut write_half) = stream.into_split();
 
@@ -37,7 +40,7 @@ pub async fn connect(
     // Incoming: socket → app
     let (incoming_tx, incoming_rx) = tokio::sync::mpsc::channel::<String>(100);
 
-    let nick_ = nick.clone();
+    let nick_ = nick.as_ref().to_string();
 
     // Writer task: drains outgoing_rx and writes to the TCP socket.
     tokio::spawn(async move {
@@ -45,10 +48,10 @@ pub async fn connect(
         // `BotClient::send` already appends CRLF; here we write raw lines.
         // Registration
         if let Err(e) = write_half
-            .write_all(format!("NICK {nick_}\r\n").as_bytes())
+            .write_all(format!("NICK {}\r\n", nick_).as_bytes())
             .await
         {
-            eprintln!("failed to write NICK: {e:?}");
+            error!("failed to write NICK: {e:?}");
             return;
         }
         if let Err(e) = write_half
@@ -86,7 +89,7 @@ pub async fn connect(
     let client = Client {
         tx: outgoing_tx,
         rx: Arc::new(tokio::sync::Mutex::new(incoming_rx)),
-        nick: nick.clone(),
+        nick: nick.into_owned(),
     };
 
     Ok(client)
