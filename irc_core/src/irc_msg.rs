@@ -27,6 +27,10 @@ pub enum Command {
         trailing: Option<String>,
     },
     Other {},
+    Raw {
+        command: String,
+        args: Vec<String>,
+    },
 }
 
 impl Command {
@@ -62,7 +66,10 @@ impl Command {
                 trailing: parts.trailing_or_first().map(str::to_owned),
             }),
 
-            _ => Some(Command::Other {}),
+            _ => Some(Command::Raw {
+                command: parts.command.into(),
+                args: parts.args.iter().copied().map(str::to_owned).collect(),
+            }),
         }
     }
 }
