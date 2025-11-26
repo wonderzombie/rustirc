@@ -1,5 +1,5 @@
 use anyhow::Context;
-use std::sync::Arc;
+use std::{borrow::Cow, sync::Arc};
 use tokio::sync::{
     Mutex,
     mpsc::{Receiver, Sender},
@@ -16,8 +16,9 @@ pub struct Client {
 }
 
 impl Client {
-    pub async fn send(&self, line: &str) -> anyhow::Result<()> {
-        self.tx.send(format!("{}\r\n", line)).await?;
+    pub async fn send<'a>(&self, line: impl Into<Cow<'a, str>>) -> anyhow::Result<()> {
+        let owned = line.into().to_owned();
+        self.tx.send(format!("{}\r\n", owned)).await?;
         Ok(())
     }
 
