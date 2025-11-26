@@ -12,7 +12,7 @@ use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::net::TcpStream;
 
 use anyhow::Context as _;
-use tracing::info;
+use tracing::{error, info};
 
 use crate::client::Client;
 
@@ -55,10 +55,10 @@ where
             return;
         }
         if let Err(e) = write_half
-            .write_all(format!("USER {user} 0 * :{user}\r\n").as_bytes())
+            .write_all(format!("USER {} 0 * :{}\r\n", nick_, user.as_ref()).as_bytes())
             .await
         {
-            eprintln!("failed to write USER: {e:?}");
+            error!("failed to write USER: {e:?}");
             return;
         }
 
@@ -67,10 +67,10 @@ where
                 line.push_str("\r\n");
             }
             if let Err(e) = write_half.write_all(line.as_bytes()).await {
-                eprintln!("writer task error: {e:?}");
+                error!("writer task error: {e:?}");
                 break;
             }
-            println!("==> {}", line.trim_end());
+            info!("==> {}", line.trim_end());
         }
     });
 
@@ -78,7 +78,7 @@ where
     tokio::spawn(async move {
         let mut lines = BufReader::new(read_half).lines();
         while let Ok(Some(line)) = lines.next_line().await {
-            println!("<== {}", line.trim_end());
+            info!("<== {}", line.trim_end());
             if incoming_tx.send(line).await.is_err() {
                 break; // receiver dropped; end the task
             }
