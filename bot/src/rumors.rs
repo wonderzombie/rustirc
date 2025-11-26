@@ -1,3 +1,5 @@
+use std::ops::ControlFlow;
+
 use crate::irc_core::handler::{Context, PrivmsgHandler};
 use sqlx::{Pool, Result as SqlxResult, Sqlite};
 use tracing::info;
@@ -17,27 +19,47 @@ impl PrivmsgHandler for RumorsHandler {
         source: &str,
         channel: &str,
         message: &str,
-    ) -> std::ops::ControlFlow<()> {
-        if let Some(stripped) = strip_bot_prefix(&self.bot_name, message) {
-            if let Some(topic) = extract_topic(stripped) {
-                if let Ok(Some(rumor)) = self.fetch_random_rumor_matching(topic).await {
+    ) -> ControlFlow<()> {
+        let stripped = match strip_bot_prefix(&self.bot_name, message) {
+            Some(s) => s,
+            None => return ControlFlow::Continue(()),
+        };
+
+        if stripped.is_empty() {
+            return ControlFlow::Continue(());
+        }
+
+        if let Some(topic) = extract_topic(stripped) {
+            match self.fetch_random_rumor_matching(topic).await {
+                Ok(Some(rumor)) => {
                     let response = format!("{} {}", self.random_prefix(), rumor);
                     let _ = ctx.client.privmsg(channel, &response).await;
-                } else {
+                }
+                Ok(None) => {
                     let _ = ctx
                         .client
                         .privmsg(channel, "I don't know any rumors about that.")
                         .await;
                 }
-            } else if !source.is_empty() && !stripped.is_empty() {
-                // Store the rumor only if it has a source and a message
-                let _ = self.store_rumor(source, channel, stripped).await;
-                let _ = ctx.client.privmsg(channel, "Good to know!").await;
+                Err(e) => {
+                    info!("Error fetching rumor: {:?}", e);
+                    let _ = ctx
+                        .client
+                        .privmsg(channel, "Sorry, I had trouble looking that up.")
+                        .await;
+                }
             }
-            return std::ops::ControlFlow::Break(());
+            return ControlFlow::Break(());
         }
 
-        std::ops::ControlFlow::Continue(())
+        if !source.is_empty() {
+            // Store the rumor only if it has a source and a message
+            let _ = self.store_rumor(source, channel, stripped).await;
+            let _ = ctx.client.privmsg(channel, "Good to know!").await;
+            return ControlFlow::Break(());
+        }
+
+        ControlFlow::Continue(())
     }
 }
 
@@ -134,21 +156,22 @@ fn strip_bot_prefix<'a>(bot_name: &str, message: &'a str) -> Option<&'a str> {
     }
 }
 
-/// Returns the tail of a message after the first interrogative word, if any.
-fn extract_query_tail<'a>(message: &'a str) -> Option<&'a str> {
-    let interrogatives: [&'static str; 6] = ["who", "what", "when", "where", "why", "how"];
-    let lowered = message.to_lowercase();
-    let orig_words: Vec<&str> = message.split_whitespace().collect();
-    let lowered_words: Vec<&str> = lowered.split_whitespace().collect();
+// /// Returns the tail of a message after the first interrogative word, if any.
+// ///
+// fn extract_query_tail<'a>(message: &'a str) -> Option<&'a str> {
+//     let interrogatives: [&'static str; 6] = ["who", "what", "when", "where", "why", "how"];
+//     let lowered = message.to_lowercase();
+//     let orig_words: Vec<&str> = message.split_whitespace().collect();
+//     let lowered_words: Vec<&str> = lowered.split_whitespace().collect();
 
-    for (i, word) in lowered_words.iter().enumerate() {
-        if interrogatives.contains(word) && i + 1 < orig_words.len() {
-            return Some(&message[message.find(orig_words[i + 1]).unwrap_or(message.len())..]);
-        }
-    }
+//     for (i, word) in lowered_words.iter().enumerate() {
+//         if interrogatives.contains(word) && i + 1 < orig_words.len() {
+//             return Some(&message[message.find(orig_words[i + 1]).unwrap_or(message.len())..]);
+//         }
+//     }
 
-    None
-}
+//     None
+// }
 
 /// Extracts a topic from a message ending with a question mark, or None if not found.
 fn extract_topic<'a>(message: &'a str) -> Option<&'a str> {
@@ -178,14 +201,14 @@ mod tests {
         assert_eq!(strip_bot_prefix(bot_name, "Hello RumorBot"), None);
     }
 
-    #[test]
-    fn test_extract_query_tail() {
-        assert_eq!(
-            extract_query_tail("Who is the best coder?"),
-            Some("is the best coder?")
-        );
-        assert_eq!(extract_query_tail("Tell me a rumor about Rust."), None);
-    }
+    // #[test]
+    // fn test_extract_query_tail() {
+    //     assert_eq!(
+    //         extract_query_tail("Who is the best coder?"),
+    //         Some("is the best coder?")
+    //     );
+    //     assert_eq!(extract_query_tail("Tell me a rumor about Rust."), None);
+    // }
 
     #[test]
     fn test_extract_topic() {
