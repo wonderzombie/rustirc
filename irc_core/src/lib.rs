@@ -12,7 +12,7 @@ use tokio::net::TcpStream;
 use anyhow::Context as _;
 use tracing::info;
 
-use crate::client::BotClient;
+use crate::client::Client;
 
 pub async fn connect(
     server: impl Into<String>,
@@ -83,7 +83,7 @@ pub async fn connect(
         // dropping incoming_tx closes the channel
     });
 
-    let client = BotClient {
+    let client = Client {
         tx: outgoing_tx,
         rx: Arc::new(tokio::sync::Mutex::new(incoming_rx)),
         nick: nick.clone(),

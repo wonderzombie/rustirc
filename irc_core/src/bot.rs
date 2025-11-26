@@ -1,4 +1,4 @@
-use crate::client::BotClient;
+use crate::client::Client;
 use crate::handler::{Handler, State};
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -6,7 +6,7 @@ use tokio::sync::Mutex;
 pub struct Bot {
     handlers: Vec<Box<dyn Handler>>,
     state: Arc<Mutex<State>>,
-    client: BotClient,
+    client: Client,
 }
 
 pub struct BotBuilder {
@@ -34,7 +34,7 @@ impl BotBuilder {
         }
     }
 
-    pub fn build(self, client: BotClient) -> Bot {
+    pub fn build(self, client: Client) -> Bot {
         Bot {
             handlers: self.handlers,
             state: self.state,

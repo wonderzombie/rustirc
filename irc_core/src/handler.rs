@@ -3,7 +3,7 @@ use std::{collections::HashMap, ops::ControlFlow, sync::Arc};
 
 use tokio::sync::Mutex;
 
-use crate::{client::BotClient, irc_msg};
+use crate::{client::Client, irc_msg};
 
 /// Information about when a user was last seen and what they said.
 #[derive(Default, Clone)]
@@ -24,7 +24,7 @@ pub struct State {
 
 /// Read/write context passed to handlers.
 pub struct Context {
-    pub client: BotClient,
+    pub client: Client,
     pub state: Arc<Mutex<State>>,
 }
 

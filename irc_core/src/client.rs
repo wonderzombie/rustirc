@@ -8,14 +8,14 @@ use tokio::sync::{
 use crate::irc_msg::Msg;
 
 #[derive(Clone)]
-pub struct BotClient {
+pub struct Client {
     pub(crate) tx: Sender<String>,
     pub(crate) rx: Arc<Mutex<Receiver<String>>>,
 
     pub nick: String,
 }
 
-impl BotClient {
+impl Client {
     pub async fn send(&self, line: &str) -> anyhow::Result<()> {
         self.tx.send(format!("{}\r\n", line)).await?;
         Ok(())
