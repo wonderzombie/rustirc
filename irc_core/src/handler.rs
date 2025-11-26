@@ -28,6 +28,16 @@ pub struct Context {
     pub state: Arc<Mutex<State>>,
 }
 
+impl Context {
+    pub async fn with_state<F, R>(&self, f: F) -> R
+    where
+        F: FnOnce(&mut State) -> R,
+    {
+        let mut guard = self.state.lock().await;
+        f(&mut guard)
+    }
+}
+
 #[async_trait::async_trait]
 pub trait Handler: Send + Sync {
     /// Return ControlFlow::Break(()) to stop processing further handlers.
