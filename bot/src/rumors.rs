@@ -1,6 +1,8 @@
 use crate::irc_core::handler::{Context, PrivmsgHandler};
 use sqlx::{Pool, Result as SqlxResult, Sqlite};
+use tracing::info;
 
+#[derive(Debug)]
 pub struct RumorsHandler {
     db_pool: Pool<Sqlite>,
     bot_name: String,
@@ -21,6 +23,11 @@ impl PrivmsgHandler for RumorsHandler {
                 if let Ok(Some(rumor)) = self.fetch_random_rumor_matching(topic).await {
                     let response = format!("{} {}", self.random_prefix(), rumor);
                     let _ = ctx.client.privmsg(channel, &response).await;
+                } else {
+                    let _ = ctx
+                        .client
+                        .privmsg(channel, "I don't know any rumors about that.")
+                        .await;
                 }
             } else if !source.is_empty() && !stripped.is_empty() {
                 // Store the rumor only if it has a source and a message
@@ -70,6 +77,7 @@ impl RumorsHandler {
 
     async fn store_rumor(&self, nick: &str, channel: &str, rumor: &str) -> SqlxResult<()> {
         let now = chrono::Local::now().timestamp();
+        info!("Storing rumor from `{nick}`: `{rumor}`");
         sqlx::query_scalar::<_, String>(
             r#"INSERT INTO rumors (nick, channel, message, ts) VALUES (?1, ?2, ?3, ?4)"#,
         )
@@ -92,7 +100,13 @@ impl RumorsHandler {
         .fetch_optional(&self.db_pool)
         .await?;
 
-        Ok(row)
+        if let Some(rumor) = row {
+            info!("Found matching rumor matching `{query}`: `{rumor}`");
+            Ok(Some(rumor))
+        } else {
+            info!("No matching rumor found for query: `{query}`");
+            Ok(None)
+        }
     }
 
     fn random_prefix(&self) -> &str {

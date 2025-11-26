@@ -3,6 +3,8 @@ use std::{collections::HashMap, ops::ControlFlow};
 
 use irc_core::handler::{self, PrivmsgHandler};
 
+use tracing::info;
+
 pub struct SeenHandler;
 
 #[async_trait::async_trait]
@@ -51,6 +53,10 @@ impl PrivmsgHandler for SeenHandler {
 fn format_seen_response(state: &handler::State, target_nick: &str) -> String {
     if let Some(info) = state.seen.get(target_nick) {
         let human_time = chrono_humanize::HumanTime::from(info.last_seen);
+        info!(
+            "Saw `{target_nick}` at `{}` saying `{}`",
+            info.last_seen, info.message
+        );
         format!(
             "{} was last seen {} saying: {}",
             target_nick,
@@ -58,6 +64,7 @@ fn format_seen_response(state: &handler::State, target_nick: &str) -> String {
             info.message,
         )
     } else {
+        info!("Never seen `{target_nick}`");
         format!("I have not seen {}", target_nick)
     }
 }

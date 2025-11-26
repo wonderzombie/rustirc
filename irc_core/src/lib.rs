@@ -10,6 +10,7 @@ use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::net::TcpStream;
 
 use anyhow::Context as _;
+use tracing::info;
 
 use crate::client::BotClient;
 
@@ -21,6 +22,8 @@ pub async fn connect(
     let server = server.into();
     let nick = nick.into();
     let user = user.into();
+
+    info!("Connecting to IRC server {} as {}", server, nick);
 
     let stream = TcpStream::connect(&server)
         .await

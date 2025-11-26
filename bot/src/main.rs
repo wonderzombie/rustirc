@@ -27,13 +27,13 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    let subscriber = tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::INFO)
+        .finish();
+    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
+
     println!("=== Hello, world!");
     let args = Args::parse();
-    println!(
-        "=== Using nick: {}, user: {}, server: {}, channels: {:?}",
-        args.nick, args.user, args.server, args.channels
-    );
-
     let state = irc_core::handler::State {
         channels: args.channels.clone(),
         ..Default::default()
