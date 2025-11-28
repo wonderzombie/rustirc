@@ -1,5 +1,6 @@
 use std::ops::ControlFlow;
 
+
 use tracing::info;
 
 use crate::irc_core::{handler, irc_msg};
@@ -14,11 +15,12 @@ impl handler::Handler for WelcomeHandler {
                 // End of MOTD, join a channel
                 match code {
                     376 | 422 => {
-                        let state = ctx.state.lock().await;
-                        for channel in &state.channels {
-                            let _ = ctx.client.join(channel).await;
+                        let channels = ctx.with_state(|state| state.channels.clone()).await;
+                        for channel in channels {
+                            let _ = ctx.client.join(&channel).await;
                             info!("Joined channel {}", channel);
                         }
+
                         return ControlFlow::Break(());
                     }
                     _ => return ControlFlow::Continue(()),

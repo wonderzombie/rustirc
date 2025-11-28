@@ -16,10 +16,9 @@ impl PrivmsgHandler for SeenHandler {
         channel: &str,
         message: &str,
     ) -> ControlFlow<()> {
-        let in_channel = {
-            let state = ctx.state.lock().await;
-            state.channels.iter().any(|c| channel == c)
-        };
+        let in_channel = ctx
+            .with_state(|state| state.channels.iter().any(|c| channel == c))
+            .await;
         if !in_channel {
             return ControlFlow::Continue(());
         }
@@ -31,8 +30,9 @@ impl PrivmsgHandler for SeenHandler {
                 let target_nick = parts[2];
 
                 let response = {
-                    let state = ctx.state.lock().await;
-                    format_seen_response(&state, target_nick)
+                    ctx.with_state(|state| {
+                        format_seen_response(&state, target_nick)
+                    }).await
                 };
 
                 let _ = ctx.client.privmsg(channel, &response).await;
@@ -42,8 +42,9 @@ impl PrivmsgHandler for SeenHandler {
 
         if !source.is_empty() {
             let now = chrono::Local::now();
-            let mut state = ctx.state.lock().await;
-            update_seen(&mut state.seen, source, message, now);
+            ctx.with_state(|state| {
+                update_seen(&mut state.seen, source, message, now);
+            }).await;
         }
 
         ControlFlow::Continue(())
@@ -71,17 +72,17 @@ fn format_seen_response(state: &handler::State, target_nick: &str) -> String {
 
 fn update_seen(
     seen: &mut HashMap<String, handler::SeenInfo>,
-    nick: &str,
+    source: &str,
     message: &str,
     now: chrono::DateTime<chrono::Local>,
 ) {
-    seen.entry(nick.to_string())
+    seen.entry(source.to_string())
         .and_modify(|info| {
             info.last_seen = now;
             info.message = message.to_string();
         })
         .or_insert_with(|| handler::SeenInfo {
-            nick: nick.to_string(),
+            nick: source.to_string(),
             last_seen: now,
             message: message.to_string(),
         });
