@@ -7,20 +7,15 @@ pub struct ExampleHandler;
 #[async_trait::async_trait]
 impl handler::Handler for ExampleHandler {
     async fn handle(&self, ctx: &handler::Context, msg: &irc_msg::Msg) -> ControlFlow<()> {
-        match msg.command {
-            irc_msg::Command::Privmsg {
+        if let irc_msg::Command::Privmsg {
                 ref reply_to,
                 ref message,
                 ..
-            } => {
-                if message.starts_with("!test") {
-                    let nick = msg.nick().unwrap_or("someone".into());
-                    let _ = ctx.client.privmsg(&reply_to, &format!("hi {}", nick)).await;
-                }
+            } = msg.command
+            && message.starts_with("!test") {
+                let nick = msg.nick().unwrap_or("someone".into());
+                let _ = ctx.client.privmsg(reply_to, &format!("hi {}", nick)).await;
             }
-
-            _ => {}
-        }
 
         ControlFlow::Continue(())
     }

@@ -82,7 +82,7 @@ impl RumorsHandler {
         .await?;
 
         // TODO: load from config or default to these
-        const CANNED_PREFIXES: &[&'static str] = &[
+        const CANNED_PREFIXES: &[&str] = &[
             "rumor has it",
             "i heard that",
             "they say",
@@ -150,7 +150,7 @@ fn strip_bot_prefix<'a>(bot_name: &str, message: &'a str) -> Option<&'a str> {
     if lowered.starts_with(&format!("{},", bot_name_lower))
         || lowered.starts_with(&format!("{}:", bot_name_lower))
     {
-        Some(&message[bot_name.len() + 1..].trim())
+        Some(message[bot_name.len() + 1..].trim())
     } else {
         None
     }
@@ -174,7 +174,7 @@ fn strip_bot_prefix<'a>(bot_name: &str, message: &'a str) -> Option<&'a str> {
 // }
 
 /// Extracts a topic from a message ending with a question mark, or None if not found.
-fn extract_topic<'a>(message: &'a str) -> Option<&'a str> {
+fn extract_topic(message: &str) -> Option<&str> {
     let trimmed = message.trim();
     if trimmed.ends_with("?") {
         trimmed.trim_end_matches("?").split_whitespace().next()

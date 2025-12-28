@@ -42,12 +42,12 @@ fn parse_score_delta(message: &str) -> Option<(&str, i32)> {
 
     for token in message.split_ascii_whitespace() {
         if let Some((nick, _)) = token.split_once("++")
-            && nick != ""
+            && !nick.is_empty()
         {
             delta = Some((nick, 1));
             break;
         } else if let Some((nick, _)) = token.split_once("--")
-            && nick != ""
+            && !nick.is_empty()
         {
             delta = Some((nick, -1));
             break;
@@ -58,10 +58,10 @@ fn parse_score_delta(message: &str) -> Option<(&str, i32)> {
 
 impl ScoreHandler {
     pub fn add_to_score(scores: &mut HashMap<String, i32>, nick: &str, d: i32) -> i32 {
-        return *scores
+        *scores
             .entry(nick.to_string())
             .and_modify(|it| *it += d)
-            .or_insert_with(|| d);
+            .or_insert_with(|| d)
     }
 }
 

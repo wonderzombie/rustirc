@@ -1,4 +1,3 @@
-use chrono_humanize;
 use std::{collections::HashMap, ops::ControlFlow};
 
 use irc_core::handler::{self, PrivmsgHandler};
@@ -31,7 +30,7 @@ impl PrivmsgHandler for SeenHandler {
 
                 let response = {
                     ctx.with_state(|state| {
-                        format_seen_response(&state, target_nick)
+                        format_seen_response(state, target_nick)
                     }).await
                 };
 
@@ -61,7 +60,7 @@ fn format_seen_response(state: &handler::State, target_nick: &str) -> String {
         format!(
             "{} was last seen {} saying: {}",
             target_nick,
-            human_time.to_string(),
+            human_time,
             info.message,
         )
     } else {
