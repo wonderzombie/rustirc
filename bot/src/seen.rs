@@ -29,9 +29,8 @@ impl PrivmsgHandler for SeenHandler {
                 let target_nick = parts[2];
 
                 let response = {
-                    ctx.with_state(|state| {
-                        format_seen_response(state, target_nick)
-                    }).await
+                    ctx.with_state(|state| format_seen_response(state, target_nick))
+                        .await
                 };
 
                 let _ = ctx.client.privmsg(channel, &response).await;
@@ -43,7 +42,8 @@ impl PrivmsgHandler for SeenHandler {
             let now = chrono::Local::now();
             ctx.with_state(|state| {
                 update_seen(&mut state.seen, source, message, now);
-            }).await;
+            })
+            .await;
         }
 
         ControlFlow::Continue(())
@@ -59,9 +59,7 @@ fn format_seen_response(state: &handler::State, target_nick: &str) -> String {
         );
         format!(
             "{} was last seen {} saying: {}",
-            target_nick,
-            human_time,
-            info.message,
+            target_nick, human_time, info.message,
         )
     } else {
         info!("Never seen `{target_nick}`");

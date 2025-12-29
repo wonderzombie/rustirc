@@ -1,6 +1,5 @@
 use std::ops::ControlFlow;
 
-
 use tracing::info;
 
 use crate::irc_core::{handler, irc_msg};

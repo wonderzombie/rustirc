@@ -14,9 +14,8 @@ impl PrivmsgHandler for ScoreHandler {
         message: &str,
     ) -> ControlFlow<()> {
         let in_channel = {
-            ctx.with_state(|state| {
-                state.channels.iter().any(|c| channel == c)
-            }).await
+            ctx.with_state(|state| state.channels.iter().any(|c| channel == c))
+                .await
         };
         if !in_channel {
             return ControlFlow::Continue(());
@@ -25,9 +24,9 @@ impl PrivmsgHandler for ScoreHandler {
         let delta: Option<(&str, i32)> = parse_score_delta(message);
 
         if let Some((nick, d)) = delta {
-            let new_score = ctx.with_state(|state| {
-                ScoreHandler::add_to_score(&mut state.scores, nick, d)
-            }).await;
+            let new_score = ctx
+                .with_state(|state| ScoreHandler::add_to_score(&mut state.scores, nick, d))
+                .await;
             let response = format!("{nick}'s score is now {new_score}");
             let _ = ctx.client.privmsg(channel, &response).await;
             return ControlFlow::Break(());

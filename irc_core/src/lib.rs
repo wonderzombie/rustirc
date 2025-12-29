@@ -26,7 +26,11 @@ where
     let nick: Cow<'static, str> = nick.into();
     let user: Cow<'static, str> = user.into();
 
-    info!("Connecting to IRC server {} as {}", server.as_ref(), nick.as_ref());
+    info!(
+        "Connecting to IRC server {} as {}",
+        server.as_ref(),
+        nick.as_ref()
+    );
 
     let stream = TcpStream::connect(server.as_ref())
         .await
